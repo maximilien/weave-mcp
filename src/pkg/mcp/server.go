@@ -1,0 +1,399 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 dr.max
+
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/maximilien/weave-mcp/src/pkg/config"
+	"github.com/maximilien/weave-mcp/src/pkg/weaviate"
+	"go.uber.org/zap"
+)
+
+// Server represents the MCP server implementation
+type Server struct {
+	config   *config.Config
+	logger   *zap.Logger
+	weaviate *weaviate.Client
+	mu       sync.RWMutex
+	Tools    map[string]Tool
+}
+
+// Tool represents an MCP tool
+type Tool struct {
+	Name        string                 `json:"name"`
+	Description string                 `json:"description"`
+	InputSchema map[string]interface{} `json:"inputSchema"`
+	Handler     func(ctx context.Context, args map[string]interface{}) (interface{}, error)
+}
+
+// NewServer creates a new MCP server
+func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
+	server := &Server{
+		config: cfg,
+		logger: logger,
+		Tools:  make(map[string]Tool),
+	}
+
+	// Initialize Weaviate client
+	if err := server.initializeWeaviate(); err != nil {
+		return nil, fmt.Errorf("failed to initialize Weaviate client: %w", err)
+	}
+
+	// Register tools
+	server.registerTools()
+
+	return server, nil
+}
+
+// initializeWeaviate initializes the Weaviate client
+func (s *Server) initializeWeaviate() error {
+	// Get the default database configuration
+	dbConfig, err := s.config.GetDefaultDatabase()
+	if err != nil {
+		return fmt.Errorf("failed to get default database: %w", err)
+	}
+
+	// Create Weaviate client configuration
+	weaviateConfig := &weaviate.Config{
+		URL:          dbConfig.URL,
+		APIKey:       dbConfig.APIKey,
+		OpenAIAPIKey: dbConfig.OpenAIAPIKey,
+	}
+
+	// Create Weaviate client
+	client, err := weaviate.NewClient(weaviateConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create Weaviate client: %w", err)
+	}
+
+	s.weaviate = client
+	return nil
+}
+
+// Handler returns the HTTP handler for the MCP server
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+
+	// Health check endpoint
+	mux.HandleFunc("/health", s.handleHealth)
+
+	// MCP endpoints
+	mux.HandleFunc("/mcp/tools/list", s.handleToolsList)
+	mux.HandleFunc("/mcp/tools/call", s.handleToolCall)
+
+	return mux
+}
+
+// registerTools registers all available MCP tools
+func (s *Server) registerTools() {
+	// Collection management tools
+	s.registerTool(Tool{
+		Name:        "list_collections",
+		Description: "List all collections in the vector database",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleListCollections,
+	})
+
+	s.registerTool(Tool{
+		Name:        "create_collection",
+		Description: "Create a new collection in the vector database",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection to create",
+				},
+				"type": map[string]interface{}{
+					"type":        "string",
+					"description": "Type of collection (text or image)",
+					"enum":        []string{"text", "image"},
+				},
+				"description": map[string]interface{}{
+					"type":        "string",
+					"description": "Description of the collection",
+				},
+			},
+			"required": []string{"name", "type"},
+		},
+		Handler: s.handleCreateCollection,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_collection",
+		Description: "Delete a collection from the vector database",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection to delete",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleDeleteCollection,
+	})
+
+	// Document management tools
+	s.registerTool(Tool{
+		Name:        "list_documents",
+		Description: "List documents in a collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"limit": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of documents to return",
+					"default":     10,
+				},
+			},
+			"required": []string{"collection"},
+		},
+		Handler: s.handleListDocuments,
+	})
+
+	s.registerTool(Tool{
+		Name:        "create_document",
+		Description: "Create a new document in a collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"url": map[string]interface{}{
+					"type":        "string",
+					"description": "URL of the document",
+				},
+				"text": map[string]interface{}{
+					"type":        "string",
+					"description": "Text content of the document",
+				},
+				"metadata": map[string]interface{}{
+					"type":        "object",
+					"description": "Additional metadata for the document",
+					"default":     map[string]interface{}{},
+				},
+			},
+			"required": []string{"collection", "url", "text"},
+		},
+		Handler: s.handleCreateDocument,
+	})
+
+	s.registerTool(Tool{
+		Name:        "get_document",
+		Description: "Get a specific document by ID",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"document_id": map[string]interface{}{
+					"type":        "string",
+					"description": "ID of the document to retrieve",
+				},
+			},
+			"required": []string{"collection", "document_id"},
+		},
+		Handler: s.handleGetDocument,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_document",
+		Description: "Delete a document from a collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"document_id": map[string]interface{}{
+					"type":        "string",
+					"description": "ID of the document to delete",
+				},
+			},
+			"required": []string{"collection", "document_id"},
+		},
+		Handler: s.handleDeleteDocument,
+	})
+
+	s.registerTool(Tool{
+		Name:        "count_documents",
+		Description: "Count documents in a collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+			},
+			"required": []string{"collection"},
+		},
+		Handler: s.handleCountDocuments,
+	})
+
+	// Query tools
+	s.registerTool(Tool{
+		Name:        "query_documents",
+		Description: "Query documents using semantic search",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Search query",
+				},
+				"limit": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of results to return",
+					"default":     5,
+				},
+			},
+			"required": []string{"collection", "query"},
+		},
+		Handler: s.handleQueryDocuments,
+	})
+}
+
+// registerTool registers a tool with the server
+func (s *Server) registerTool(tool Tool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Tools[tool.Name] = tool
+	s.logger.Debug("Registered tool", zap.String("name", tool.Name))
+}
+
+// handleHealth handles health check requests
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	response := map[string]interface{}{
+		"status":    "healthy",
+		"timestamp": time.Now().UTC(),
+		"version":   "dev",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		s.logger.Error("Failed to encode health response", zap.Error(err))
+	}
+}
+
+// handleToolsList handles tool listing requests
+func (s *Server) handleToolsList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	tools := make([]map[string]interface{}, 0, len(s.Tools))
+	for _, tool := range s.Tools {
+		tools = append(tools, map[string]interface{}{
+			"name":        tool.Name,
+			"description": tool.Description,
+			"inputSchema": tool.InputSchema,
+		})
+	}
+	s.mu.RUnlock()
+
+	response := map[string]interface{}{
+		"tools": tools,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		s.logger.Error("Failed to encode tools list response", zap.Error(err))
+	}
+}
+
+// handleToolCall handles tool execution requests
+func (s *Server) handleToolCall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var request struct {
+		Name      string                 `json:"name"`
+		Arguments map[string]interface{} `json:"arguments"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.RLock()
+	tool, exists := s.Tools[request.Name]
+	s.mu.RUnlock()
+
+	if !exists {
+		http.Error(w, fmt.Sprintf("Tool '%s' not found", request.Name), http.StatusNotFound)
+		return
+	}
+
+	// Execute tool with timeout
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	result, err := tool.Handler(ctx, request.Arguments)
+	if err != nil {
+		s.logger.Error("Tool execution failed",
+			zap.String("tool", request.Name),
+			zap.Error(err))
+
+		response := map[string]interface{}{
+			"error": err.Error(),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		if encodeErr := json.NewEncoder(w).Encode(response); encodeErr != nil {
+			s.logger.Error("Failed to encode error response", zap.Error(encodeErr))
+		}
+		return
+	}
+
+	response := map[string]interface{}{
+		"result": result,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		s.logger.Error("Failed to encode tool call response", zap.Error(err))
+	}
+}
+
+// Cleanup cleans up resources
+func (s *Server) Cleanup() error {
+	// Close Weaviate client if needed
+	// (Weaviate client doesn't have a Close method, so nothing to do here)
+	return nil
+}
