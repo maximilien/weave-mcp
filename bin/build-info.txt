@@ -1,17 +1,17 @@
 Weave MCP Server Build Information
 ===================================
 
-Version: 5056dae
-Build Date: Mon Oct  6 16:26:25 PDT 2025
-Build Time: 2025-10-06T23:26:25Z
+Version: 0.0.1-1-g8d829ee-dirty
+Build Date: Mon Oct  6 16:29:09 PDT 2025
+Build Time: 2025-10-06T23:29:09Z
 Build Host: Maxs-MacBook-Air-M3-2.local
 Git Branch: main
-Git Commit: 5056daecbab5f099e8c350875f1f85aa01a83156
-Git Status: 15 files changed
+Git Commit: 8d829ee07084684409ef591ff3f353a4a15b08f1
+Git Status: 2 files changed
 
 MCP Server Build:
   Status: Built
-  Version: 5056dae
+  Version: 0.0.1-1-g8d829ee-dirty
   Go Version: go version go1.24.1 darwin/arm64
   Binary: bin/weave-mcp (22M)
 
