@@ -131,8 +131,8 @@ fi
 
 # JSON linting
 echo "📄 Checking JSON files..."
-if find . -name "*.json" -not -path "./src/vendor/*" -not -path "./node_modules/*" | grep -q .; then
-    find . -name "*.json" -not -path "./src/vendor/*" -not -path "./node_modules/*" -print0 | while IFS= read -r -d '' json_file; do
+if find . -name "*.json" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./tools/mcp-inspector/*" | grep -q .; then
+    find . -name "*.json" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./tools/mcp-inspector/*" -print0 | while IFS= read -r -d '' json_file; do
         if ! python3 -m json.tool "$json_file" >/dev/null 2>&1; then
             print_error "Invalid JSON found in $json_file"
             exit 1
@@ -143,12 +143,13 @@ else
     echo "ℹ️  No JSON files found to validate"
 fi
 
-# YAML linting (excluding GitHub Actions workflows with false positives)
+# YAML linting (excluding GitHub Actions workflows with false positives and MCP Inspector)
 echo "📋 Checking YAML files..."
-if find . -name "*.yml" -o -name "*.yaml" | grep -q .; then
+if find . -name "*.yml" -o -name "*.yaml" -not -path "./tools/mcp-inspector/*" | grep -q .; then
     if command_exists yamllint; then
         # Use .yamllint config file to exclude GitHub Actions workflows with false positives
-        if yamllint .; then
+        # Run yamllint only on files not in MCP Inspector directory
+        if find . -name "*.yml" -o -name "*.yaml" -not -path "./tools/mcp-inspector/*" -exec yamllint {} +; then
             print_success "YAML linting passed!"
         else
             print_warning "YAML linting issues found"
@@ -161,11 +162,12 @@ else
     echo "ℹ️  No YAML files found to lint"
 fi
 
-# Markdown linting (excluding docs directory with extended formats)
+# Markdown linting (excluding docs directory with extended formats and MCP Inspector)
 echo "📝 Checking Markdown files..."
-if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" | grep -q .; then
+if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" | grep -q .; then
     if command_exists markdownlint; then
-        if npx markdownlint "**/*.md" --ignore node_modules --ignore src/vendor --ignore docs; then
+        # Run markdownlint only on files not in excluded directories
+        if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -exec npx markdownlint {} +; then
             print_success "Markdown linting passed!"
         else
             print_warning "Markdown linting issues found"

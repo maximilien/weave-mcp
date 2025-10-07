@@ -40,17 +40,21 @@ print_help() {
     echo "Usage: ./build.sh [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  all          Build the MCP server binary (default)"
+    echo "  all          Build both HTTP and stdio MCP server binaries (default)"
+    echo "  http         Build only the HTTP MCP server binary"
+    echo "  stdio        Build only the stdio MCP server binary"
     echo "  clean        Clean all build artifacts"
     echo "  --help, -h   Show this help message"
     echo ""
     echo "This script will:"
-    echo "  • Build Golang MCP server binary"
+    echo "  • Build Golang MCP server binaries (HTTP and stdio)"
     echo "  • Generate optimized production builds"
     echo "  • Create build information"
     echo ""
     echo "Examples:"
-    echo "  ./build.sh                    # Build everything"
+    echo "  ./build.sh                    # Build everything (HTTP + stdio)"
+    echo "  ./build.sh http               # Build only HTTP server"
+    echo "  ./build.sh stdio              # Build only stdio server"
     echo "  ./build.sh clean              # Clean build artifacts"
 }
 
@@ -59,9 +63,55 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to build the MCP server
-build_server() {
-    print_header "Building Weave MCP Server..."
+# Function to build the HTTP MCP server
+build_http_server() {
+    print_header "Building HTTP MCP Server..."
+    
+    # Build the HTTP MCP server binary with version information
+    print_status "Building HTTP MCP server binary..."
+    LDFLAGS="-X main.version=$VERSION"
+    LDFLAGS="$LDFLAGS -X main.gitCommit=$GIT_COMMIT"
+    LDFLAGS="$LDFLAGS -X main.buildTime=$BUILD_TIME"
+    
+    if ! go build -ldflags "$LDFLAGS" -o bin/weave-mcp ./src/main.go; then
+        print_error "HTTP MCP server build failed"
+        exit 1
+    fi
+    
+    # Make binary executable
+    chmod +x bin/weave-mcp
+    
+    print_status "✅ HTTP MCP server built successfully!"
+    print_status "   • Binary: bin/weave-mcp"
+    print_status "   • Size: $(stat -f%z bin/weave-mcp 2>/dev/null | numfmt --to=iec || echo "unknown")"
+}
+
+# Function to build the stdio MCP server
+build_stdio_server() {
+    print_header "Building stdio MCP Server..."
+    
+    # Build the stdio MCP server binary with version information
+    print_status "Building stdio MCP server binary..."
+    LDFLAGS="-X main.version=$VERSION"
+    LDFLAGS="$LDFLAGS -X main.gitCommit=$GIT_COMMIT"
+    LDFLAGS="$LDFLAGS -X main.buildTime=$BUILD_TIME"
+    
+    if ! go build -ldflags "$LDFLAGS" -o bin/weave-mcp-stdio ./src/cmd/stdio/main.go; then
+        print_error "stdio MCP server build failed"
+        exit 1
+    fi
+    
+    # Make binary executable
+    chmod +x bin/weave-mcp-stdio
+    
+    print_status "✅ stdio MCP server built successfully!"
+    print_status "   • Binary: bin/weave-mcp-stdio"
+    print_status "   • Size: $(stat -f%z bin/weave-mcp-stdio 2>/dev/null | numfmt --to=iec || echo "unknown")"
+}
+
+# Function to build the MCP servers
+build_servers() {
+    print_header "Building Weave MCP Servers..."
     
     # Check if Go is installed
     if ! command_exists go; then
@@ -110,23 +160,20 @@ build_server() {
     print_status "Git Commit: ${GIT_COMMIT:0:7}"
     print_status "Build Time: $BUILD_TIME"
     
-    # Build the MCP server binary with version information
-    print_status "Building MCP server binary..."
-    LDFLAGS="-X main.version=$VERSION"
-    LDFLAGS="$LDFLAGS -X main.gitCommit=$GIT_COMMIT"
-    LDFLAGS="$LDFLAGS -X main.buildTime=$BUILD_TIME"
-    
-    if ! go build -ldflags "$LDFLAGS" -o bin/weave-mcp ./src/main.go; then
-        print_error "MCP server build failed"
-        exit 1
-    fi
-    
-    # Make binary executable
-    chmod +x bin/weave-mcp
-    
-    print_status "✅ MCP server built successfully!"
-    print_status "   • Binary: bin/weave-mcp"
-    print_status "   • Size: $(stat -f%z bin/weave-mcp 2>/dev/null | numfmt --to=iec || echo "unknown")"
+    # Build servers based on argument
+    case "${1:-all}" in
+        "http")
+            build_http_server
+            ;;
+        "stdio")
+            build_stdio_server
+            ;;
+        "all"|"")
+            build_http_server
+            echo ""
+            build_stdio_server
+            ;;
+    esac
 }
 
 # Function to clean build artifacts
@@ -178,15 +225,24 @@ Git Branch: $(git branch --show-current 2>/dev/null || echo "unknown")
 Git Commit: $GIT_COMMIT
 Git Status: $(git status --porcelain 2>/dev/null | wc -l | xargs echo) files changed
 
-MCP Server Build:
+MCP Server Builds:
 $(if [ -f "bin/weave-mcp" ]; then
-    echo "  Status: Built"
-    echo "  Version: $VERSION"
-    echo "  Go Version: $(go version 2>/dev/null || echo "unknown")"
-    echo "  Binary: bin/weave-mcp ($(stat -f%z bin/weave-mcp 2>/dev/null | numfmt --to=iec || echo "unknown"))"
+    echo "  HTTP Server:"
+    echo "    Status: Built"
+    echo "    Version: $VERSION"
+    echo "    Binary: bin/weave-mcp ($(stat -f%z bin/weave-mcp 2>/dev/null | numfmt --to=iec || echo "unknown"))"
 else
-    echo "  Status: Not built"
+    echo "  HTTP Server: Not built"
 fi)
+$(if [ -f "bin/weave-mcp-stdio" ]; then
+    echo "  stdio Server:"
+    echo "    Status: Built"
+    echo "    Version: $VERSION"
+    echo "    Binary: bin/weave-mcp-stdio ($(stat -f%z bin/weave-mcp-stdio 2>/dev/null | numfmt --to=iec || echo "unknown"))"
+else
+    echo "  stdio Server: Not built"
+fi)
+echo "  Go Version: $(go version 2>/dev/null || echo "unknown")"
 
 Environment Variables:
 $(if [ -f .env ]; then
@@ -217,34 +273,42 @@ EOF
 
 # Function to build everything
 build_all() {
-    print_header "Building Weave MCP Server..."
+    print_header "Building Weave MCP Servers..."
     echo "====================================="
     
-    # Build MCP server
-    build_server
+    # Build MCP servers
+    build_servers "${1:-all}"
     
     # Create build information
     create_build_info
     
     print_header "Build Complete! 🎉"
     echo "====================================="
-    print_status "Weave MCP Server has been built successfully!"
+    print_status "Weave MCP Servers have been built successfully!"
     echo ""
     print_status "Built components:"
-    print_status "  • MCP Server Binary: bin/weave-mcp"
+    print_status "  • HTTP MCP Server: bin/weave-mcp"
+    print_status "  • stdio MCP Server: bin/weave-mcp-stdio"
     print_status "  • Build Info: bin/build-info.txt"
     echo ""
     print_status "Next steps:"
-    print_status "  1. Run './bin/weave-mcp' to start the server"
-    print_status "  2. Check 'bin/build-info.txt' for detailed build information"
-    print_status "  3. Run './test.sh' to run tests"
-    print_status "  4. Run './lint.sh' to check code quality"
+    print_status "  1. Run './bin/weave-mcp' to start the HTTP server"
+    print_status "  2. Run './bin/weave-mcp-stdio' to start the stdio server"
+    print_status "  3. Check 'bin/build-info.txt' for detailed build information"
+    print_status "  4. Run './test.sh' to run tests"
+    print_status "  5. Run './lint.sh' to check code quality"
 }
 
 # Main script logic
 case "${1:-all}" in
     "all"|"")
         build_all
+        ;;
+    "http")
+        build_all "http"
+        ;;
+    "stdio")
+        build_all "stdio"
         ;;
     "clean")
         clean_build

@@ -1,0 +1,1 @@
+{"level":"info","ts":1759865503.004051,"caller":"src/main.go:87","msg":"Starting Weave MCP Server","address":"localhost:8030","version":"dev","git_commit":"unknown"}

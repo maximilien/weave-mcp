@@ -4,20 +4,41 @@ A Model Context Protocol (MCP) server for vector database operations, built with
 Go and designed to work seamlessly with the
 [weave-cli](https://github.com/maximilien/weave-cli) tool.
 
-> **Recent Updates**: The server now includes comprehensive logging and monitoring
-> capabilities, direct integration with weave-cli for code reuse, and a complete
-> CI/CD pipeline with automated testing and releases.
+> **Recent Updates**: The server now supports both HTTP and stdio transports,
+> includes an MCP Inspector for debugging and testing, comprehensive logging and
+> monitoring capabilities, direct integration with weave-cli for code reuse, and
+> a complete CI/CD pipeline with automated testing and releases.
 
 ## Features
 
+- **Dual Transport Support**: HTTP and stdio MCP transports
 - **Vector Database Support**: Weaviate, Milvus, and Mock databases
 - **MCP Tools**: Complete set of tools for collection and document management
+- **MCP Inspector**: Web-based debugging and testing interface
 - **Configuration**: YAML + Environment Variables
 - **Testing**: Comprehensive unit and integration tests with mocks
 - **Scripts**: Build, start, stop, lint, and test automation
 - **Embedding Support**: OpenAI and custom local embeddings
 - **Logging**: Comprehensive file logging with monitoring tools
 - **Code Reuse**: Direct integration with weave-cli for consistency
+
+## Transport Modes
+
+The Weave MCP Server supports two transport modes:
+
+### HTTP Transport
+
+- **Binary**: `bin/weave-mcp`
+- **URL**: `http://localhost:8030`
+- **Use Case**: Web applications, API integrations, testing
+- **Features**: RESTful API endpoints, health checks, easy debugging
+
+### stdio Transport
+
+- **Binary**: `bin/weave-mcp-stdio`
+- **Transport**: stdin/stdout communication
+- **Use Case**: MCP clients like Claude Desktop, direct integration
+- **Features**: Native MCP protocol, efficient communication, client integration
 
 ## MCP Tools
 
@@ -41,6 +62,42 @@ The server exposes the following MCP tools:
 
 - `query_documents` - Perform semantic search on documents
 
+## MCP Inspector
+
+The MCP Inspector is a web-based debugging tool that provides a graphical
+interface for testing and exploring MCP tools. It's particularly useful for:
+
+- **Testing MCP Tools**: Execute tools with custom parameters
+- **Debugging**: See detailed request/response information
+- **Exploration**: Discover available tools and their schemas
+- **Development**: Rapid prototyping and testing
+
+### Inspector Features
+
+- **Interactive Tool Testing**: Execute any MCP tool with custom parameters
+- **Real-time Logging**: See tool execution logs in real-time
+- **Schema Exploration**: Browse available tools and their schemas
+- **Request/Response Inspection**: Detailed view of MCP protocol messages
+- **Web Interface**: Easy-to-use browser-based interface
+
+### Access
+
+Once started, the MCP Inspector is typically available at:
+
+- **Web Interface**: <http://localhost:6274> (with auth token)
+- **MCP Server**: <http://localhost:8030>
+
+### Inspector Configuration
+
+The inspector uses the official `npx @modelcontextprotocol/inspector` method
+and is configured to connect to the Weave MCP Server using the configuration
+in `tools/mcp-inspector-config.json`. This file is created during setup and
+includes:
+
+- Server connection details
+- Environment variable mapping
+- Tool configuration
+
 ## Quick Start
 
 ### Prerequisites
@@ -57,10 +114,10 @@ git clone https://github.com/maximilien/weave-mcp.git
 cd weave-mcp
 ```
 
-1. Install dependencies:
+1. Run the setup script (installs MCP Inspector and builds servers):
 
 ```bash
-go mod tidy
+./setup.sh
 ```
 
 1. Configure the server:
@@ -71,49 +128,147 @@ cp .env.example .env
 # Edit config.yaml and .env with your settings
 ```
 
+**Manual Installation** (if setup script fails):
+
+```bash
+# Install Go dependencies
+go mod tidy
+
+# Build servers
+./build.sh
+```
+
+### MCP Inspector Setup (Optional)
+
+The MCP Inspector provides a web-based interface for testing and debugging MCP
+tools. To set it up:
+
+```bash
+# Install MCP Inspector and dependencies
+./setup.sh
+```
+
+This will:
+
+- Install Node.js dependencies (if not already installed)
+- Clone the MCP Inspector repository
+- Install inspector dependencies
+- Create inspector configuration
+- Build the MCP server
+
+**Prerequisites for MCP Inspector:**
+
+- Node.js 22.7.5+ (required for MCP Inspector)
+- npm (comes with Node.js)
+
+> **Note**: MCP Inspector requires Node.js 22.7.5 or later. If you have an older
+> version, the setup script will skip the inspector installation but continue
+> with the server setup.
+
 ### Building
 
 ```bash
+# Build both HTTP and stdio servers
 ./build.sh
+
+# Build only HTTP server
+./build.sh http
+
+# Build only stdio server
+./build.sh stdio
 ```
 
 This will:
 
 - Download Go dependencies
 - Run tests
-- Build the MCP server binary
+- Build the MCP server binaries (HTTP and/or stdio)
 - Create build information
 
 ### Running
 
-#### Start the server
+#### Start HTTP Server
 
 ```bash
-./start.sh
+# Start HTTP server in foreground
+./start.sh http
+
+# Start HTTP server as daemon
+./start.sh http --daemon
 ```
 
-#### Start as daemon
+#### Start stdio Server
 
 ```bash
-./start.sh --daemon
+# Show stdio server configuration for MCP clients
+./start.sh stdio
 ```
 
-#### Stop the server
+#### Start MCP Inspector
 
 ```bash
-./stop.sh
+# Start inspector (will start HTTP server if not running)
+./start.sh inspector
+
+# Or start both HTTP server and inspector together
+./start.sh both
 ```
 
-#### Check server status
+#### Stop Services
 
 ```bash
+# Stop HTTP server
+./stop.sh http
+
+# Stop stdio server (if running)
+./stop.sh stdio
+
+# Stop inspector
+./stop.sh inspector
+
+# Stop all services
+./stop.sh all
+
+# Check status
 ./stop.sh status
+```
+
+#### MCP Client Integration
+
+For stdio server integration with MCP clients like Claude Desktop:
+
+```bash
+# Show stdio server configuration
+./start.sh stdio
+```
+
+Add this configuration to your MCP client settings:
+
+```json
+{
+  "mcpServers": {
+    "weave-mcp": {
+      "command": "/path/to/weave-mcp/bin/weave-mcp-stdio",
+      "args": []
+    }
+  }
+}
 ```
 
 #### Monitor logs
 
 ```bash
+# Monitor all logs
 ./tools/tail-logs.sh
+
+# Monitor HTTP server logs only
+./tools/tail-logs.sh mcp
+
+# Monitor stdio server logs only
+./tools/tail-logs.sh stdio
+
+# Monitor MCP Inspector logs only
+./tools/tail-logs.sh inspector
 ```
 
 ### Testing
@@ -360,7 +515,10 @@ Use the `./tools/tail-logs.sh` script to monitor logs in real-time:
 ```text
 weave-mcp/
 ├── src/
-│   ├── main.go                 # Main server entry point
+│   ├── main.go                 # HTTP server entry point
+│   ├── cmd/
+│   │   └── stdio/
+│   │       └── main.go         # stdio server entry point
 │   └── pkg/
 │       ├── config/            # Configuration management
 │       ├── mcp/               # MCP server implementation
@@ -370,13 +528,17 @@ weave-mcp/
 │       └── version/           # Version information
 ├── tests/                     # Test files
 ├── tools/                     # Utility scripts
-│   └── tail-logs.sh          # Log monitoring script
+│   ├── tail-logs.sh          # Log monitoring script
+│   └── mcp-inspector-config.json # MCP Inspector configuration
 ├── logs/                      # Log files directory
 │   └── .gitkeep              # Preserve directory in git
 ├── schemas/                   # Collection schemas
 ├── bin/                       # Built binaries
+│   ├── weave-mcp             # HTTP server binary
+│   └── weave-mcp-stdio       # stdio server binary
 ├── config.yaml               # Configuration file
 ├── .env                      # Environment variables
+├── setup.sh                  # Setup script (MCP Inspector + build)
 ├── build.sh                  # Build script
 ├── start.sh                  # Start script
 ├── stop.sh                   # Stop script
@@ -462,7 +624,18 @@ For issues and questions:
 
 ## Changelog
 
-### v0.0.6 (Latest) - Comprehensive Logging and Monitoring
+### v0.0.7 (Latest) - Dual Transport Support and MCP Inspector
+
+- **Dual Transport Support**: Added stdio transport alongside HTTP transport
+- **stdio Server**: New `bin/weave-mcp-stdio` binary for MCP client integration
+- **MCP Inspector**: Web-based debugging and testing interface
+- **Setup Script**: Automated setup with `./setup.sh` for easy installation
+- **Enhanced Scripts**: Updated start/stop scripts with multiple modes
+- **Client Integration**: Easy configuration for Claude Desktop and other MCP clients
+- **Improved Build**: Support for building individual or both server types
+- **Better Documentation**: Updated README with comprehensive usage examples
+
+### v0.0.6 - Comprehensive Logging and Monitoring
 
 - **Logging System**: Added file logging to `./logs/weave-mcp.log`
 - **Log Monitoring**: Created `./tools/tail-logs.sh` script for real-time log monitoring
