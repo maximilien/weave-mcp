@@ -8,15 +8,13 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Function to check if a service is running
 check_service() {
     local port=$1
     local service_name=$2
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+    if lsof -Pi :"$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
         echo -e "${GREEN}✅ $service_name is running on port $port${NC}"
         return 0
     else
@@ -36,7 +34,8 @@ show_status() {
     echo ""
     check_service 8030 "Weave MCP Server"
     
-    local mcp_pid=$(get_mcp_pid)
+    local mcp_pid
+    mcp_pid=$(get_mcp_pid)
     if [ ! -z "$mcp_pid" ]; then
         echo -e "${GREEN}✅ Weave MCP Server is running (PID: $mcp_pid)${NC}"
     else
@@ -47,7 +46,12 @@ show_status() {
     # Check if logs directory exists
     if [ -d "logs" ]; then
         echo -e "${BLUE}📁 Log files:${NC}"
-        ls -la logs/ 2>/dev/null | grep -E "\.(log|txt)$" || echo "No log files found"
+        for file in logs/*.log logs/*.txt; do
+            [ -f "$file" ] && ls -la "$file"
+        done 2>/dev/null
+        if [ ! -f "logs/weave-mcp.log" ] && [ ! -f "logs/weave-mcp.txt" ]; then
+            echo "No log files found"
+        fi
     else
         echo -e "${YELLOW}⚠️ Logs directory not found${NC}"
     fi
@@ -61,7 +65,7 @@ show_recent_logs() {
     
     if [ -f "logs/weave-mcp.log" ]; then
         echo -e "${YELLOW}Recent MCP server logs:${NC}"
-        tail -50 logs/weave-mcp.log | while read line; do
+        tail -50 logs/weave-mcp.log | while read -r line; do
             echo "[MCP] $line"
         done
     else
@@ -70,7 +74,7 @@ show_recent_logs() {
     
     echo ""
     echo -e "${YELLOW}Recent system logs containing 'weave-mcp':${NC}"
-    log show --predicate 'eventMessage CONTAINS "weave-mcp"' --last 5m 2>/dev/null | tail -20 | while read line; do
+    log show --predicate 'eventMessage CONTAINS "weave-mcp"' --last 5m 2>/dev/null | tail -20 | while read -r line; do
         echo "[SYS] $line"
     done
 }
@@ -86,7 +90,7 @@ monitor_system_logs() {
     echo ""
     
     # Monitor system logs for the specific process
-    log stream --predicate "process == '$pid'" 2>/dev/null | while read line; do
+    log stream --predicate "process == '$pid'" 2>/dev/null | while read -r line; do
         echo "[$service_tag] $line"
     done
 }
