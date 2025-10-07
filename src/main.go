@@ -59,7 +59,7 @@ func main() {
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{"stdout", logFile.Name()}
 	config.ErrorOutputPaths = []string{"stderr", logFile.Name()}
-	
+
 	logger, err := config.Build()
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
