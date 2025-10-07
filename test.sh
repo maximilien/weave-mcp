@@ -67,9 +67,9 @@ print_help() {
     echo "    - Utility function testing"
     echo ""
     echo "  Integration Tests:"
-    echo "    - Vector database client testing"
-    echo "    - MCP server testing"
+    echo "    - Mock client testing"
     echo "    - MCP integration with Weaviate Cloud"
+    echo "    - Vector database client testing"
     echo "    - End-to-end workflow testing"
 }
 
@@ -161,6 +161,14 @@ run_integration_tests() {
         print_success "Fast integration tests passed!"
     else
         print_warning "Fast integration tests failed"
+    fi
+    
+    # Run MCP integration tests (if Weaviate is configured)
+    print_status "Running MCP integration tests (Weaviate Cloud)..."
+    if go test -v -timeout=60s ./tests/... -run="TestFastMCPIntegration|TestMCPToolCallViaHTTP"; then
+        print_success "MCP integration tests passed!"
+    else
+        print_warning "MCP integration tests failed or skipped (check Weaviate configuration)"
     fi
     
     # Run Weaviate integration tests if configured
