@@ -133,6 +133,7 @@ start_server() {
     print_status "  • Host: $HOST"
     print_status "  • Port: $PORT"
     print_status "  • Binary: bin/weave-mcp"
+    print_status "  • Logs: logs/weave-mcp.log"
     
     if [ "$daemon_mode" = true ]; then
         print_status "Starting server in daemon mode..."
@@ -148,13 +149,14 @@ start_server() {
         sleep 2
         
         if ps -p "$PID" > /dev/null 2>&1; then
-            print_status "Server started successfully in daemon mode!"
-            print_status "  • PID: $PID"
-            print_status "  • Log file: weave-mcp.log"
-            print_status "  • PID file: weave-mcp.pid"
-            print_status "  • Server URL: http://$HOST:$PORT"
-            print_status ""
-            print_status "Use './stop.sh' to stop the server"
+        print_status "Server started successfully in daemon mode!"
+        print_status "  • PID: $PID"
+        print_status "  • Log file: logs/weave-mcp.log"
+        print_status "  • PID file: weave-mcp.pid"
+        print_status "  • Server URL: http://$HOST:$PORT"
+        print_status ""
+        print_status "Use './stop.sh' to stop the server"
+        print_status "Use './tools/tail-logs.sh' to monitor logs"
         else
             print_error "Failed to start server in daemon mode"
             print_status "Check weave-mcp.log for error details"
@@ -168,6 +170,8 @@ start_server() {
         print_status "Server URL: http://$HOST:$PORT"
         print_status "Health check: http://$HOST:$PORT/health"
         print_status "MCP tools: http://$HOST:$PORT/mcp/tools/list"
+        print_status "Logs: logs/weave-mcp.log"
+        print_status "Monitor logs: ./tools/tail-logs.sh"
         print_status ""
         
         # Start server in foreground

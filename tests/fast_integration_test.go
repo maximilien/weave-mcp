@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -267,17 +266,25 @@ func TestFastMCPIntegration(t *testing.T) {
 
 		// Test adding an image document via MCP server
 		// Note: Image collections may expect metadata as JSON string
-		metadataJSON := `{"test_type": "mcp_integration", "timestamp": ` + fmt.Sprintf("%d", time.Now().Unix()) + `, "source": "fast_integration_test", "content_type": "image", "image_url": "https://example.com/mcp-test-image-1.jpg"}`
+		metadata := map[string]interface{}{
+			"test_type":    "mcp_integration",
+			"timestamp":    time.Now().Unix(),
+			"source":       "fast_integration_test",
+			"content_type": "image",
+			"image_url":    "https://example.com/mcp-test-image-1.jpg",
+		}
 		docReq := map[string]interface{}{
 			"collection": imageCollection,
 			"url":        "https://example.com/mcp-test-image-1.jpg",
 			"text":       "Test image for MCP integration testing",
-			"metadata":   metadataJSON,
+			"metadata":   metadata,
 		}
 
 		result, err := server.Tools["create_document"].Handler(addCtx, docReq)
 		if err != nil {
-			t.Logf("Failed to add image document (collection may have different schema): %v", err)
+			// Expected: Image collections may have different schema requirements
+			// The Weaviate client sends metadata as JSON string, but some collections expect map
+			t.Logf("Failed to add image document (expected - collection schema mismatch): %v", err)
 			return
 		}
 

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -41,8 +42,25 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Create logger
-	logger, err := zap.NewProduction()
+	// Create logs directory
+	logsDir := "logs"
+	if err := os.MkdirAll(logsDir, 0755); err != nil {
+		log.Fatalf("Failed to create logs directory: %v", err)
+	}
+
+	// Create file logger
+	logFile, err := os.OpenFile(filepath.Join(logsDir, "weave-mcp.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open log file: %v", err)
+	}
+	defer logFile.Close()
+
+	// Create logger with both console and file output
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{"stdout", logFile.Name()}
+	config.ErrorOutputPaths = []string{"stderr", logFile.Name()}
+	
+	logger, err := config.Build()
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}

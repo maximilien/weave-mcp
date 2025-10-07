@@ -15,8 +15,14 @@ import (
 	"github.com/maximilien/weave-cli/src/pkg/weaviate"
 )
 
+
 // TestWeaviateIntegration runs fast integration tests with Weaviate
 func TestWeaviateIntegration(t *testing.T) {
+	// Load .env file if it exists (from project root)
+	if err := loadEnvFile("../.env"); err != nil {
+		t.Logf("Could not load .env file: %v", err)
+	}
+
 	// Skip if no Weaviate configuration
 	if os.Getenv("WEAVIATE_URL") == "" || os.Getenv("WEAVIATE_API_KEY") == "" {
 		t.Skip("Skipping Weaviate integration tests - missing WEAVIATE_URL or WEAVIATE_API_KEY")
@@ -34,12 +40,12 @@ func TestWeaviateIntegration(t *testing.T) {
 		URL:    os.Getenv("WEAVIATE_URL"),
 		APIKey: os.Getenv("WEAVIATE_API_KEY"),
 		Collections: []config.Collection{
-			{Name: os.Getenv("WEAVIATE_COLLECTION_TEST"), Type: "text"},
+			{Name: os.Getenv("WEAVIATE_COLLECTION"), Type: "text"},
 		},
 	}
 
 	if cfg.Collections[0].Name == "" {
-		cfg.Collections[0].Name = "WeaveCLITest"
+		cfg.Collections[0].Name = "WeaveMcpDocs"
 	}
 
 	client, err := weaviate.NewClient(&weaviate.Config{
@@ -138,12 +144,12 @@ func TestWeaviateConnectionSpeed(t *testing.T) {
 		URL:    os.Getenv("WEAVIATE_URL"),
 		APIKey: os.Getenv("WEAVIATE_API_KEY"),
 		Collections: []config.Collection{
-			{Name: os.Getenv("WEAVIATE_COLLECTION_TEST"), Type: "text"},
+			{Name: os.Getenv("WEAVIATE_COLLECTION"), Type: "text"},
 		},
 	}
 
 	if cfg.Collections[0].Name == "" {
-		cfg.Collections[0].Name = "WeaveCLITest"
+		cfg.Collections[0].Name = "WeaveMcpDocs"
 	}
 
 	client, err := weaviate.NewClient(&weaviate.Config{
@@ -192,12 +198,12 @@ func TestWeaviateErrorHandling(t *testing.T) {
 		URL:    os.Getenv("WEAVIATE_URL"),
 		APIKey: os.Getenv("WEAVIATE_API_KEY"),
 		Collections: []config.Collection{
-			{Name: os.Getenv("WEAVIATE_COLLECTION_TEST"), Type: "text"},
+			{Name: os.Getenv("WEAVIATE_COLLECTION"), Type: "text"},
 		},
 	}
 
 	if cfg.Collections[0].Name == "" {
-		cfg.Collections[0].Name = "WeaveCLITest"
+		cfg.Collections[0].Name = "WeaveMcpDocs"
 	}
 
 	client, err := weaviate.NewClient(&weaviate.Config{
@@ -245,12 +251,12 @@ func BenchmarkWeaviateOperations(b *testing.B) {
 		URL:    os.Getenv("WEAVIATE_URL"),
 		APIKey: os.Getenv("WEAVIATE_API_KEY"),
 		Collections: []config.Collection{
-			{Name: os.Getenv("WEAVIATE_COLLECTION_TEST"), Type: "text"},
+			{Name: os.Getenv("WEAVIATE_COLLECTION"), Type: "text"},
 		},
 	}
 
 	if cfg.Collections[0].Name == "" {
-		cfg.Collections[0].Name = "WeaveCLITest"
+		cfg.Collections[0].Name = "WeaveMcpDocs"
 	}
 
 	client, err := weaviate.NewClient(&weaviate.Config{
