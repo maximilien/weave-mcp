@@ -47,7 +47,7 @@ print_help() {
     echo "Commands:"
     echo "  unit        Run only unit tests"
     echo "  integration Run only integration tests"
-    echo "  fast        Run fast tests (unit + mock integration)"
+    echo "  fast        Run fast tests (unit + mock + MCP integration)"
     echo "  all         Run all tests (unit + integration)"
     echo "  coverage    Run tests with coverage report"
     echo "  help        Show this help message"
@@ -55,7 +55,7 @@ print_help() {
     echo "Examples:"
     echo "  ./test.sh unit         # Run only unit tests"
     echo "  ./test.sh integration  # Run only integration tests"
-    echo "  ./test.sh fast         # Run fast tests (unit + mock integration)"
+    echo "  ./test.sh fast         # Run fast tests (unit + mock + MCP integration)"
     echo "  ./test.sh all          # Run all tests"
     echo "  ./test.sh coverage     # Run tests with coverage report"
     echo "  ./test.sh              # Run unit tests (default)"
@@ -69,6 +69,7 @@ print_help() {
     echo "  Integration Tests:"
     echo "    - Vector database client testing"
     echo "    - MCP server testing"
+    echo "    - MCP integration with Weaviate Cloud"
     echo "    - End-to-end workflow testing"
 }
 
@@ -201,6 +202,14 @@ run_fast_tests() {
         print_success "Fast integration tests passed!"
     else
         print_warning "Fast integration tests failed"
+    fi
+    
+    # Run MCP integration tests (if Weaviate is configured)
+    print_status "Running MCP integration tests (Weaviate Cloud)..."
+    if go test -v -timeout=60s ./tests/... -run="TestFastMCPIntegration|TestMCPToolCallViaHTTP"; then
+        print_success "MCP integration tests passed!"
+    else
+        print_warning "MCP integration tests failed or skipped (check Weaviate configuration)"
     fi
     
     print_success "Fast tests completed!"

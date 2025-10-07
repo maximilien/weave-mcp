@@ -189,5 +189,5 @@ jobs:
         run: |
           echo "Running fast integration tests..."
           go test -v -timeout=15s ./tests/... \
-            -run="TestMock|TestConfig|TestMCP" -short
+            -run="TestMock|TestConfig|TestMCP|TestFastMCPIntegration|TestMCPToolCallViaHTTP" -short
           echo "Fast integration tests completed"
