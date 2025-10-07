@@ -4,6 +4,10 @@ A Model Context Protocol (MCP) server for vector database operations, built with
 Go and designed to work seamlessly with the
 [weave-cli](https://github.com/maximilien/weave-cli) tool.
 
+> **Recent Updates**: The server now includes comprehensive logging and monitoring
+> capabilities, direct integration with weave-cli for code reuse, and a complete
+> CI/CD pipeline with automated testing and releases.
+
 ## Features
 
 - **Vector Database Support**: Weaviate, Milvus, and Mock databases
@@ -12,6 +16,8 @@ Go and designed to work seamlessly with the
 - **Testing**: Comprehensive unit and integration tests with mocks
 - **Scripts**: Build, start, stop, lint, and test automation
 - **Embedding Support**: OpenAI and custom local embeddings
+- **Logging**: Comprehensive file logging with monitoring tools
+- **Code Reuse**: Direct integration with weave-cli for consistency
 
 ## MCP Tools
 
@@ -102,6 +108,12 @@ This will:
 
 ```bash
 ./stop.sh status
+```
+
+#### Monitor logs
+
+```bash
+./tools/tail-logs.sh
 ```
 
 ### Testing
@@ -260,6 +272,87 @@ curl -X POST http://localhost:8030/mcp/tools/call \
   }'
 ```
 
+## Logging and Monitoring
+
+The Weave MCP Server includes comprehensive logging and monitoring capabilities.
+
+### Log Files
+
+- **Location**: `./logs/weave-mcp.log`
+- **Format**: Structured JSON with timestamps and caller information
+- **Output**: Both console and file logging simultaneously
+- **Auto-creation**: Logs directory is created automatically on startup
+
+### Log Monitoring Tools
+
+Use the `./tools/tail-logs.sh` script to monitor logs in real-time:
+
+#### Monitor all logs
+
+```bash
+./tools/tail-logs.sh all
+```
+
+#### Monitor MCP server logs only
+
+```bash
+./tools/tail-logs.sh mcp
+```
+
+#### Check service status
+
+```bash
+./tools/tail-logs.sh status
+```
+
+#### Show recent logs
+
+```bash
+./tools/tail-logs.sh recent
+```
+
+#### Show help
+
+```bash
+./tools/tail-logs.sh help
+```
+
+### Log Features
+
+- **Real-time monitoring**: Tail logs as they're written
+- **Service status**: Check if MCP server is running
+- **Color-coded output**: Easy to read with syntax highlighting
+- **System integration**: Includes system logs for comprehensive monitoring
+- **Multiple modes**: Different monitoring options for different needs
+
+### Example Log Output
+
+```json
+{
+  "level": "info",
+  "ts": 1759848440.371797,
+  "caller": "src/main.go:87",
+  "msg": "Starting Weave MCP Server",
+  "address": "localhost:8030",
+  "version": "0.0.6",
+  "git_commit": "da2f207"
+}
+{
+  "level": "info",
+  "ts": 1759848441.123456,
+  "caller": "src/main.go:95",
+  "msg": "MCP server started successfully"
+}
+{
+  "level": "info",
+  "ts": 1759848442.789012,
+  "caller": "src/pkg/mcp/handlers.go:45",
+  "msg": "Tool called",
+  "tool": "list_collections",
+  "collection": "WeaveDocs"
+}
+```
+
 ## Development
 
 ### Project Structure
@@ -273,8 +366,13 @@ weave-mcp/
 │       ├── mcp/               # MCP server implementation
 │       ├── weaviate/          # Weaviate client (from weave-cli)
 │       ├── milvus/            # Milvus client
-│       └── mock/              # Mock client for testing
+│       ├── mock/              # Mock client for testing
+│       └── version/           # Version information
 ├── tests/                     # Test files
+├── tools/                     # Utility scripts
+│   └── tail-logs.sh          # Log monitoring script
+├── logs/                      # Log files directory
+│   └── .gitkeep              # Preserve directory in git
 ├── schemas/                   # Collection schemas
 ├── bin/                       # Built binaries
 ├── config.yaml               # Configuration file
@@ -364,11 +462,50 @@ For issues and questions:
 
 ## Changelog
 
-### v0.1.0 (Initial Release)
+### v0.0.6 (Latest) - Comprehensive Logging and Monitoring
 
-- Initial MCP server implementation
-- Support for Weaviate, Milvus, and Mock databases
-- Complete set of collection and document management tools
-- Comprehensive testing suite
-- Build and deployment scripts
-- Configuration management with YAML and environment variables
+- **Logging System**: Added file logging to `./logs/weave-mcp.log`
+- **Log Monitoring**: Created `./tools/tail-logs.sh` script for real-time log monitoring
+- **Dual Output**: Logs written to both console and file simultaneously
+- **Service Status**: Added service status checking and PID detection
+- **System Integration**: Integrated with system logs for comprehensive monitoring
+- **Color-coded Output**: Enhanced readability with syntax highlighting
+- **Multiple Monitoring Modes**: all, mcp, status, recent, help commands
+
+### v0.0.5 - Code Reuse and Integration
+
+- **Weave-cli Integration**: Import Weaviate client directly from weave-cli
+- **Code Reuse**: Eliminated code duplication between projects
+- **Consistent Behavior**: Same Weaviate client behavior across both projects
+- **Easier Maintenance**: Updates to weave-cli automatically benefit MCP project
+- **Integration Tests**: Added comprehensive integration test suite
+- **Test Coverage**: Mock, MCP, and Weave-cli integration tests
+
+### v0.0.4 - Fast Integration Tests
+
+- **Fast Integration Tests**: Added comprehensive MCP server integration tests
+- **Weaviate Cloud Testing**: Direct testing with Weaviate Cloud client
+- **Collection Management**: Test collection creation, listing, and operations
+- **Document Operations**: Test document CRUD operations via MCP server
+- **Query Testing**: Test semantic search and query functionality
+- **Error Handling**: Improved error handling and test reliability
+
+### v0.0.3 - CI/CD and Release Automation
+
+- **GitHub Actions**: Complete CI/CD pipeline with build, test, lint, and release
+  workflows
+- **Multi-platform Builds**: Support for Linux, macOS, and Windows
+- **Automated Releases**: Automatic release creation on tag pushes
+- **Security Scanning**: Integrated vulnerability scanning and secret detection
+- **Code Quality**: Automated linting for Go, YAML, and Markdown files
+- **Version Management**: Automated version injection and build information
+
+### v0.0.2 - Initial Release
+
+- **MCP Server**: Initial MCP server implementation
+- **Vector Database Support**: Weaviate, Milvus, and Mock databases
+- **MCP Tools**: Complete set of collection and document management tools
+- **Testing Suite**: Comprehensive unit and integration tests with mocks
+- **Scripts**: Build, start, stop, lint, and test automation
+- **Configuration**: YAML + Environment Variables support
+- **Embedding Support**: OpenAI and custom local embeddings
