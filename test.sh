@@ -174,7 +174,7 @@ run_integration_tests() {
     # Run Weaviate integration tests if configured
     if [ -n "$WEAVIATE_URL" ] && [ "$WEAVIATE_URL" != "http://localhost:8080" ]; then
         print_status "Running Weaviate integration tests..."
-        if go test -v -timeout=30s ./tests/... -run="TestWeaviate"; then
+        if go test -v -timeout=30s ./tests/... -run="TestWeaviateIntegration|TestWeaviateConnectionSpeed"; then
             print_success "Weaviate integration tests passed!"
         else
             print_warning "Weaviate integration tests failed"

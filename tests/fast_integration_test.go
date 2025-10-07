@@ -16,7 +16,7 @@ import (
 
 	"github.com/maximilien/weave-mcp/src/pkg/config"
 	"github.com/maximilien/weave-mcp/src/pkg/mcp"
-	"github.com/maximilien/weave-mcp/src/pkg/weaviate"
+	"github.com/maximilien/weave-cli/src/pkg/weaviate"
 	"go.uber.org/zap"
 )
 

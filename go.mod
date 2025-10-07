@@ -6,6 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/joho/godotenv v1.5.1
+	github.com/maximilien/weave-cli v0.2.8
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.10.0
 	github.com/weaviate/weaviate-go-client/v4 v4.12.0
@@ -23,7 +24,7 @@ require (
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/loads v0.21.2 // indirect
 	github.com/go-openapi/spec v0.20.6 // indirect
-	github.com/go-openapi/strfmt v0.21.3 // indirect
+	github.com/go-openapi/strfmt v0.21.7 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-openapi/validate v0.22.1 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
