@@ -388,6 +388,7 @@ stop_stdio_server() {
 stop_inspector() {
     print_header "Stopping MCP Inspector..."
     
+    # First try to stop using PID file if it exists
     if [ -f "mcp-inspector.pid" ]; then
         PID=$(cat mcp-inspector.pid)
         
@@ -432,10 +433,55 @@ stop_inspector() {
         else
             print_warning "Inspector PID file exists but process is not running"
             rm -f mcp-inspector.pid
+        fi
+    fi
+    
+    # Also kill any inspector processes by name pattern (in case PID file doesn't exist)
+    print_status "Checking for inspector processes by name pattern..."
+    
+    # Find all inspector-related processes
+    INSPECTOR_PIDS=$(pgrep -f "inspector|@modelcontextprotocol/inspector" 2>/dev/null || true)
+    
+    if [ -n "$INSPECTOR_PIDS" ]; then
+        print_status "Found inspector processes: $INSPECTOR_PIDS"
+        
+        # Try graceful shutdown first
+        for PID in $INSPECTOR_PIDS; do
+            if ps -p "$PID" > /dev/null 2>&1; then
+                print_status "Stopping inspector process with PID $PID..."
+                if kill -TERM "$PID" 2>/dev/null; then
+                    print_status "Sent SIGTERM signal to process $PID..."
+                fi
+            fi
+        done
+        
+        # Wait for graceful shutdown
+        sleep 3
+        
+        # Check if any processes are still running and force kill them
+        REMAINING_PIDS=$(pgrep -f "inspector|@modelcontextprotocol/inspector" 2>/dev/null || true)
+        if [ -n "$REMAINING_PIDS" ]; then
+            print_warning "Some inspector processes did not stop gracefully, forcing shutdown..."
+            for PID in $REMAINING_PIDS; do
+                if ps -p "$PID" > /dev/null 2>&1; then
+                    print_status "Force killing inspector process with PID $PID..."
+                    kill -KILL "$PID" 2>/dev/null || true
+                fi
+            done
+            sleep 2
+        fi
+        
+        # Final check
+        FINAL_PIDS=$(pgrep -f "inspector|@modelcontextprotocol/inspector" 2>/dev/null || true)
+        if [ -n "$FINAL_PIDS" ]; then
+            print_error "Failed to stop some inspector processes: $FINAL_PIDS"
+            return 1
+        else
+            print_success "All inspector processes stopped successfully"
             return 0
         fi
     else
-        print_status "No inspector PID file found - inspector may not be running"
+        print_status "No inspector processes found running"
         return 0
     fi
 }

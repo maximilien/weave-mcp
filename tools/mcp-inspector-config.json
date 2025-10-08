@@ -4,8 +4,8 @@
       "url": "http://localhost:8030/mcp"
     },
     "weave-mcp-stdio": {
-      "command": "/Users/maximilien/github/maximilien/weave-mcp/bin/weave-mcp-stdio",
-      "args": []
+      "command": "./bin/weave-mcp-stdio",
+      "args": ["-env", ".env"]
     }
   }
 }
