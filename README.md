@@ -622,69 +622,10 @@ For issues and questions:
 2. Create a new issue with detailed information
 3. Include logs and configuration details
 
-## Changelog
+## Documentation
 
-### v0.0.7 (Latest) - Enhanced Process Management and Configuration
-
-- **Improved Process Management**: Enhanced stop script with better inspector
-  process detection and cleanup
-- **Configuration Updates**: Updated MCP Inspector config to use relative paths
-  and environment variables
-- **Better Error Handling**: More robust process stopping with graceful shutdown
-  and force kill fallback
-- **Path Standardization**: Changed absolute paths to relative paths for better
-  portability
-- **Environment Integration**: Added `-env .env` argument to stdio server for
-  proper environment variable loading
-- **Process Detection**: Added pattern-based process detection for inspector
-  cleanup
-- **Gitignore Updates**: Added `*.log` and `*.pid` files to gitignore to
-  prevent accidental commits
-
-### v0.0.6 - Comprehensive Logging and Monitoring
-
-- **Logging System**: Added file logging to `./logs/weave-mcp.log`
-- **Log Monitoring**: Created `./tools/tail-logs.sh` script for real-time log monitoring
-- **Dual Output**: Logs written to both console and file simultaneously
-- **Service Status**: Added service status checking and PID detection
-- **System Integration**: Integrated with system logs for comprehensive monitoring
-- **Color-coded Output**: Enhanced readability with syntax highlighting
-- **Multiple Monitoring Modes**: all, mcp, status, recent, help commands
-
-### v0.0.5 - Code Reuse and Integration
-
-- **Weave-cli Integration**: Import Weaviate client directly from weave-cli
-- **Code Reuse**: Eliminated code duplication between projects
-- **Consistent Behavior**: Same Weaviate client behavior across both projects
-- **Easier Maintenance**: Updates to weave-cli automatically benefit MCP project
-- **Integration Tests**: Added comprehensive integration test suite
-- **Test Coverage**: Mock, MCP, and Weave-cli integration tests
-
-### v0.0.4 - Fast Integration Tests
-
-- **Fast Integration Tests**: Added comprehensive MCP server integration tests
-- **Weaviate Cloud Testing**: Direct testing with Weaviate Cloud client
-- **Collection Management**: Test collection creation, listing, and operations
-- **Document Operations**: Test document CRUD operations via MCP server
-- **Query Testing**: Test semantic search and query functionality
-- **Error Handling**: Improved error handling and test reliability
-
-### v0.0.3 - CI/CD and Release Automation
-
-- **GitHub Actions**: Complete CI/CD pipeline with build, test, lint, and release
-  workflows
-- **Multi-platform Builds**: Support for Linux, macOS, and Windows
-- **Automated Releases**: Automatic release creation on tag pushes
-- **Security Scanning**: Integrated vulnerability scanning and secret detection
-- **Code Quality**: Automated linting for Go, YAML, and Markdown files
-- **Version Management**: Automated version injection and build information
-
-### v0.0.2 - Initial Release
-
-- **MCP Server**: Initial MCP server implementation
-- **Vector Database Support**: Weaviate, Milvus, and Mock databases
-- **MCP Tools**: Complete set of collection and document management tools
-- **Testing Suite**: Comprehensive unit and integration tests with mocks
-- **Scripts**: Build, start, stop, lint, and test automation
-- **Configuration**: YAML + Environment Variables support
-- **Embedding Support**: OpenAI and custom local embeddings
+- **[Changelog](CHANGELOG.md)** - Complete version history and release notes
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** - Common issues and
+  solutions
+- **[GitHub Releases](https://github.com/maximilien/weave-mcp/releases)** -
+  Download releases
