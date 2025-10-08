@@ -626,13 +626,20 @@ For issues and questions:
 
 ### v0.0.7 (Latest) - Enhanced Process Management and Configuration
 
-- **Improved Process Management**: Enhanced stop script with better inspector process detection and cleanup
-- **Configuration Updates**: Updated MCP Inspector config to use relative paths and environment variables
-- **Better Error Handling**: More robust process stopping with graceful shutdown and force kill fallback
-- **Path Standardization**: Changed absolute paths to relative paths for better portability
-- **Environment Integration**: Added `-env .env` argument to stdio server for proper environment variable loading
-- **Process Detection**: Added pattern-based process detection for inspector cleanup
-- **Gitignore Updates**: Added *.log and *.pid files to gitignore to prevent accidental commits
+- **Improved Process Management**: Enhanced stop script with better inspector
+  process detection and cleanup
+- **Configuration Updates**: Updated MCP Inspector config to use relative paths
+  and environment variables
+- **Better Error Handling**: More robust process stopping with graceful shutdown
+  and force kill fallback
+- **Path Standardization**: Changed absolute paths to relative paths for better
+  portability
+- **Environment Integration**: Added `-env .env` argument to stdio server for
+  proper environment variable loading
+- **Process Detection**: Added pattern-based process detection for inspector
+  cleanup
+- **Gitignore Updates**: Added `*.log` and `*.pid` files to gitignore to
+  prevent accidental commits
 
 ### v0.0.6 - Comprehensive Logging and Monitoring
 
