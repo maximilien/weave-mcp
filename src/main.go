@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -27,6 +28,10 @@ func main() {
 		envFile     = flag.String("env", ".env", "Path to environment file")
 		host        = flag.String("host", "localhost", "Server host")
 		port        = flag.String("port", "8030", "Server port")
+		corsOrigins = flag.String("cors-origins", "*", "Comma-separated list of allowed CORS origins")
+		corsMethods = flag.String("cors-methods", "GET,POST,PUT,DELETE,OPTIONS", "Comma-separated list of allowed CORS methods")
+		corsHeaders = flag.String("cors-headers", "Content-Type,Authorization,X-Requested-With", "Comma-separated list of allowed CORS headers")
+		corsMaxAge  = flag.Int("cors-max-age", 86400, "CORS preflight cache max age in seconds")
 		showVersion = flag.Bool("version", false, "Show version information")
 	)
 	flag.Parse()
@@ -66,11 +71,53 @@ func main() {
 	}
 	defer logger.Sync()
 
+	// Parse CORS configuration with environment variable fallbacks
+	corsOriginsEnv := os.Getenv("CORS_ORIGINS")
+	if corsOriginsEnv != "" {
+		*corsOrigins = corsOriginsEnv
+	}
+
+	corsMethodsEnv := os.Getenv("CORS_METHODS")
+	if corsMethodsEnv != "" {
+		*corsMethods = corsMethodsEnv
+	}
+
+	corsHeadersEnv := os.Getenv("CORS_HEADERS")
+	if corsHeadersEnv != "" {
+		*corsHeaders = corsHeadersEnv
+	}
+
+	corsMaxAgeEnv := os.Getenv("CORS_MAX_AGE")
+	if corsMaxAgeEnv != "" {
+		if maxAge, err := fmt.Sscanf(corsMaxAgeEnv, "%d", corsMaxAge); err == nil && maxAge == 1 {
+			// Successfully parsed
+		} else {
+			logger.Warn("Invalid CORS_MAX_AGE value, using default", zap.String("value", corsMaxAgeEnv))
+		}
+	}
+
+	corsConfig := &mcp.CORSConfig{
+		AllowedOrigins: strings.Split(*corsOrigins, ","),
+		AllowedMethods: strings.Split(*corsMethods, ","),
+		AllowedHeaders: strings.Split(*corsHeaders, ","),
+		MaxAge:         *corsMaxAge,
+	}
+
 	// Create MCP server
 	server, err := mcp.NewServer(cfg, logger)
 	if err != nil {
 		logger.Fatal("Failed to create MCP server", zap.Error(err))
 	}
+
+	// Set CORS configuration
+	server.SetCORSConfig(corsConfig)
+
+	// Log CORS configuration
+	logger.Info("CORS configuration",
+		zap.Strings("origins", corsConfig.AllowedOrigins),
+		zap.Strings("methods", corsConfig.AllowedMethods),
+		zap.Strings("headers", corsConfig.AllowedHeaders),
+		zap.Int("max_age", corsConfig.MaxAge))
 
 	// Create HTTP server
 	addr := fmt.Sprintf("%s:%s", *host, *port)

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,11 +19,12 @@ import (
 
 // Server represents the MCP server implementation
 type Server struct {
-	config   *config.Config
-	logger   *zap.Logger
-	weaviate *weaviate.Client
-	mu       sync.RWMutex
-	Tools    map[string]Tool
+	config     *config.Config
+	logger     *zap.Logger
+	weaviate   *weaviate.Client
+	corsConfig *CORSConfig
+	mu         sync.RWMutex
+	Tools      map[string]Tool
 }
 
 // Tool represents an MCP tool
@@ -36,9 +38,10 @@ type Tool struct {
 // NewServer creates a new MCP server
 func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	server := &Server{
-		config: cfg,
-		logger: logger,
-		Tools:  make(map[string]Tool),
+		config:     cfg,
+		logger:     logger,
+		corsConfig: DefaultCORSConfig(),
+		Tools:      make(map[string]Tool),
 	}
 
 	// Initialize Weaviate client
@@ -50,6 +53,13 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 	server.registerTools()
 
 	return server, nil
+}
+
+// SetCORSConfig sets the CORS configuration for the server
+func (s *Server) SetCORSConfig(config *CORSConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.corsConfig = config
 }
 
 // initializeWeaviate initializes the Weaviate client
@@ -77,6 +87,73 @@ func (s *Server) initializeWeaviate() error {
 	return nil
 }
 
+// CORSConfig represents CORS configuration
+type CORSConfig struct {
+	AllowedOrigins []string
+	AllowedMethods []string
+	AllowedHeaders []string
+	MaxAge         int
+}
+
+// DefaultCORSConfig returns a default CORS configuration
+func DefaultCORSConfig() *CORSConfig {
+	return &CORSConfig{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization", "X-Requested-With"},
+		MaxAge:         86400, // 24 hours
+	}
+}
+
+// corsMiddleware creates a CORS middleware
+func (s *Server) corsMiddleware(config *CORSConfig) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Set CORS headers
+			origin := r.Header.Get("Origin")
+			if s.isOriginAllowed(origin, config.AllowedOrigins) {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			} else if len(config.AllowedOrigins) > 0 && config.AllowedOrigins[0] == "*" {
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(config.AllowedMethods, ", "))
+			w.Header().Set("Access-Control-Allow-Headers", strings.Join(config.AllowedHeaders, ", "))
+			w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", config.MaxAge))
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+			// Handle preflight requests
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// isOriginAllowed checks if an origin is allowed
+func (s *Server) isOriginAllowed(origin string, allowedOrigins []string) bool {
+	if origin == "" {
+		return false
+	}
+
+	for _, allowed := range allowedOrigins {
+		if allowed == "*" || allowed == origin {
+			return true
+		}
+		// Support wildcard subdomains like *.example.com
+		if strings.HasPrefix(allowed, "*.") {
+			domain := strings.TrimPrefix(allowed, "*.")
+			if strings.HasSuffix(origin, domain) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Handler returns the HTTP handler for the MCP server
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -88,7 +165,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/mcp/tools/list", s.handleToolsList)
 	mux.HandleFunc("/mcp/tools/call", s.handleToolCall)
 
-	return mux
+	// Apply CORS middleware with configured settings
+	s.mu.RLock()
+	corsConfig := s.corsConfig
+	s.mu.RUnlock()
+
+	return s.corsMiddleware(corsConfig)(mux)
 }
 
 // registerTools registers all available MCP tools
