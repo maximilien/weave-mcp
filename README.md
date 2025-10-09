@@ -6,8 +6,9 @@ Go and designed to work seamlessly with the
 
 > **Recent Updates**: The server now supports both HTTP and stdio transports,
 > includes an MCP Inspector for debugging and testing, comprehensive logging and
-> monitoring capabilities, direct integration with weave-cli for code reuse, and
-> a complete CI/CD pipeline with automated testing and releases.
+> monitoring capabilities, direct integration with weave-cli for code reuse,
+> a complete CI/CD pipeline with automated testing and releases, and document
+> update functionality for flexible document management workflows.
 
 ## Features
 
@@ -55,6 +56,7 @@ The server exposes the following MCP tools:
 - `list_documents` - List documents in a collection with pagination
 - `create_document` - Create a new document in a collection
 - `get_document` - Retrieve a specific document by ID
+- `update_document` - Update a document's content or metadata
 - `delete_document` - Delete a document from a collection
 - `count_documents` - Count documents in a collection
 
@@ -407,6 +409,25 @@ curl -X POST http://localhost:8030/mcp/tools/call \
       "metadata": {
         "type": "test",
         "author": "user"
+      }
+    }
+  }'
+```
+
+#### Update a document
+
+```bash
+curl -X POST http://localhost:8030/mcp/tools/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "update_document",
+    "arguments": {
+      "collection": "MyCollection",
+      "document_id": "document-id-123",
+      "content": "Updated document content",
+      "metadata": {
+        "updated_by": "user",
+        "last_modified": "2025-01-09"
       }
     }
   }'
