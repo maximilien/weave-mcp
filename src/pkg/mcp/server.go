@@ -334,6 +334,35 @@ func (s *Server) registerTools() {
 		Handler: s.handleCountDocuments,
 	})
 
+	s.registerTool(Tool{
+		Name:        "update_document",
+		Description: "Update a document's content or metadata",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"document_id": map[string]interface{}{
+					"type":        "string",
+					"description": "ID of the document to update",
+				},
+				"content": map[string]interface{}{
+					"type":        "string",
+					"description": "New content for the document (optional)",
+				},
+				"metadata": map[string]interface{}{
+					"type":        "object",
+					"description": "Metadata fields to update (optional)",
+					"default":     map[string]interface{}{},
+				},
+			},
+			"required": []string{"collection", "document_id"},
+		},
+		Handler: s.handleUpdateDocument,
+	})
+
 	// Query tools
 	s.registerTool(Tool{
 		Name:        "query_documents",

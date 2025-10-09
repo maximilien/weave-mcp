@@ -276,3 +276,40 @@ func (s *Server) handleQueryDocuments(ctx context.Context, args map[string]inter
 		"query":      query,
 	}, nil
 }
+
+// handleUpdateDocument handles the update_document tool
+func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collection, ok := args["collection"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	documentID, ok := args["document_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("document ID is required")
+	}
+
+	content, _ := args["content"].(string)
+
+	var metadata map[string]interface{}
+	if metadataArg, ok := args["metadata"].(map[string]interface{}); ok {
+		metadata = metadataArg
+	}
+
+	// Validate that at least one field is being updated
+	if content == "" && len(metadata) == 0 {
+		return nil, fmt.Errorf("must provide at least one of: content or metadata")
+	}
+
+	// Update document using Weaviate client
+	err := s.weaviate.UpdateDocument(ctx, collection, documentID, content, metadata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update document: %w", err)
+	}
+
+	return map[string]interface{}{
+		"document_id": documentID,
+		"collection":  collection,
+		"status":      "updated",
+	}, nil
+}

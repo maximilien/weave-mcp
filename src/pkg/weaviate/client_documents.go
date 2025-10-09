@@ -1120,3 +1120,98 @@ func (c *Client) CreateDocument(ctx context.Context, collectionName string, doc 
 
 	return nil
 }
+
+// UpdateDocument updates an existing document in the specified collection
+func (c *Client) UpdateDocument(ctx context.Context, collectionName, documentID, content string, metadata map[string]interface{}) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	// Get the current document to merge updates
+	currentDoc, err := c.GetDocument(ctx, collectionName, documentID)
+	if err != nil {
+		return fmt.Errorf("failed to get current document: %w", err)
+	}
+
+	// Prepare properties for update
+	properties := make(map[string]interface{})
+
+	// Update content if provided
+	if content != "" {
+		// Determine which field to update based on collection schema
+		schema, err := c.GetCollectionSchema(ctx, collectionName)
+		if err == nil {
+			hasText := false
+			hasContent := false
+			for _, field := range schema {
+				if field == "text" {
+					hasText = true
+				}
+				if field == "content" {
+					hasContent = true
+				}
+			}
+
+			if hasContent {
+				properties["content"] = content
+			}
+			if hasText {
+				properties["text"] = content
+			}
+		}
+	}
+
+	// Update metadata fields if provided
+	if len(metadata) > 0 {
+		// Preserve existing metadata and merge with updates
+		if currentDoc.Metadata != nil {
+			for key, value := range currentDoc.Metadata {
+				// Only preserve if not being updated
+				if _, updating := metadata[key]; !updating {
+					properties[key] = value
+				}
+			}
+		}
+
+		// Add new/updated metadata
+		for key, value := range metadata {
+			properties[key] = value
+		}
+
+		// Update metadata JSON field
+		mergedMetadata := make(map[string]interface{})
+		if currentDoc.Metadata != nil {
+			for k, v := range currentDoc.Metadata {
+				mergedMetadata[k] = v
+			}
+		}
+		for k, v := range metadata {
+			mergedMetadata[k] = v
+		}
+
+		metadataBytes, err := json.Marshal(mergedMetadata)
+		if err == nil {
+			properties["metadata"] = string(metadataBytes)
+		}
+	} else if currentDoc.Metadata != nil {
+		// Preserve all existing metadata if no updates
+		for key, value := range currentDoc.Metadata {
+			if key != "id" && key != "_additional" {
+				properties[key] = value
+			}
+		}
+	}
+
+	// Perform the update using Weaviate's merge operation
+	err = c.client.Data().Updater().
+		WithClassName(collectionName).
+		WithID(documentID).
+		WithProperties(properties).
+		WithMerge().
+		Do(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to update document: %w", err)
+	}
+
+	return nil
+}
