@@ -15,7 +15,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated weave-cli dependency from v0.2.8 to v0.2.10
 - Separated changelog from README.md into dedicated CHANGELOG.md file
+
+### Features from weave-cli v0.2.10
+
+- Enhanced PDF text extraction with better fallback handling
+- Human-friendly error messages with helpful suggestions
+- Optional config.yaml with environment variable fallback
+- Document update functionality improvements
 
 ## [v0.1.0] - 2025-10-07
 
