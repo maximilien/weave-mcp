@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maximilien/weave-cli/src/pkg/weaviate"
 	"github.com/maximilien/weave-mcp/src/pkg/config"
 	"github.com/maximilien/weave-mcp/src/pkg/mcp"
-	"github.com/maximilien/weave-cli/src/pkg/weaviate"
 	"go.uber.org/zap"
 )
 
@@ -41,9 +41,9 @@ func loadEnvFile(filename string) error {
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
-		
+
 		// Remove quotes if present
-		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') || 
+		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') ||
 			(value[0] == '\'' && value[len(value)-1] == '\'')) {
 			value = value[1 : len(value)-1]
 		}
@@ -443,7 +443,7 @@ func TestFastMCPIntegration(t *testing.T) {
 				return
 			}
 		}
-		
+
 		if len(documents) == 0 {
 			t.Logf("No documents found for get test")
 			return
@@ -513,7 +513,7 @@ func TestFastMCPIntegration(t *testing.T) {
 				return
 			}
 		}
-		
+
 		if len(documents) == 0 {
 			t.Logf("No documents found for delete test")
 			return
@@ -551,30 +551,30 @@ func TestFastMCPIntegration(t *testing.T) {
 		// Clean up test collections (optional - comment out if you want to keep them)
 		// Uncomment the following lines if you want to clean up after testing
 		/*
-		cleanupCtx, cleanupCancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cleanupCancel()
+			cleanupCtx, cleanupCancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cleanupCancel()
 
-		deleteTextReq := map[string]interface{}{
-			"name": textCollection,
-		}
+			deleteTextReq := map[string]interface{}{
+				"name": textCollection,
+			}
 
-		_, err := server.Tools["delete_collection"].Handler(cleanupCtx, deleteTextReq)
-		if err != nil {
-			t.Logf("Failed to delete text collection: %v", err)
-		} else {
-			t.Logf("Deleted text collection: %s", textCollection)
-		}
+			_, err := server.Tools["delete_collection"].Handler(cleanupCtx, deleteTextReq)
+			if err != nil {
+				t.Logf("Failed to delete text collection: %v", err)
+			} else {
+				t.Logf("Deleted text collection: %s", textCollection)
+			}
 
-		deleteImageReq := map[string]interface{}{
-			"name": imageCollection,
-		}
+			deleteImageReq := map[string]interface{}{
+				"name": imageCollection,
+			}
 
-		_, err = server.Tools["delete_collection"].Handler(cleanupCtx, deleteImageReq)
-		if err != nil {
-			t.Logf("Failed to delete image collection: %v", err)
-		} else {
-			t.Logf("Deleted image collection: %s", imageCollection)
-		}
+			_, err = server.Tools["delete_collection"].Handler(cleanupCtx, deleteImageReq)
+			if err != nil {
+				t.Logf("Failed to delete image collection: %v", err)
+			} else {
+				t.Logf("Deleted image collection: %s", imageCollection)
+			}
 		*/
 		t.Logf("Cleanup collections test completed (cleanup disabled)")
 	})
@@ -603,7 +603,7 @@ func TestMCPToolCallViaHTTP(t *testing.T) {
 	t.Run("HTTPToolCall", func(t *testing.T) {
 		// Test MCP tool call via HTTP
 		toolCallReq := map[string]interface{}{
-			"name": "list_collections",
+			"name":      "list_collections",
 			"arguments": map[string]interface{}{},
 		}
 

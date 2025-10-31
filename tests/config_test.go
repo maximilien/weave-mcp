@@ -29,21 +29,21 @@ databases:
           type: text
           description: Test collection
 `
-		
+
 		// Write to temporary file
 		tmpFile, err := os.CreateTemp("", "test-config-*.yaml")
 		require.NoError(t, err)
 		defer os.Remove(tmpFile.Name())
-		
+
 		_, err = tmpFile.WriteString(configContent)
 		require.NoError(t, err)
 		tmpFile.Close()
-		
+
 		// Load config
 		cfg, err := config.LoadConfig(tmpFile.Name(), "")
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
-		
+
 		// Verify config
 		assert.Equal(t, "mock", cfg.Databases.Default)
 		assert.Len(t, cfg.Databases.VectorDatabases, 1)
@@ -56,7 +56,7 @@ databases:
 		assert.Equal(t, "TestCollection", cfg.Databases.VectorDatabases[0].Collections[0].Name)
 		assert.Equal(t, "text", cfg.Databases.VectorDatabases[0].Collections[0].Type)
 	})
-	
+
 	t.Run("GetDefaultDatabase", func(t *testing.T) {
 		cfg := &config.Config{
 			Databases: config.DatabasesConfig{
@@ -73,13 +73,13 @@ databases:
 				},
 			},
 		}
-		
+
 		db, err := cfg.GetDefaultDatabase()
 		require.NoError(t, err)
 		assert.Equal(t, "test-db", db.Name)
 		assert.Equal(t, config.VectorDBTypeMock, db.Type)
 	})
-	
+
 	t.Run("GetDatabase", func(t *testing.T) {
 		cfg := &config.Config{
 			Databases: config.DatabasesConfig{
@@ -95,19 +95,19 @@ databases:
 				},
 			},
 		}
-		
+
 		// Test existing database
 		db, err := cfg.GetDatabase("test-db")
 		require.NoError(t, err)
 		assert.Equal(t, "test-db", db.Name)
 		assert.Equal(t, config.VectorDBTypeMock, db.Type)
-		
+
 		// Test non-existing database
 		_, err = cfg.GetDatabase("non-existing")
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "not found")
 	})
-	
+
 	t.Run("ListDatabases", func(t *testing.T) {
 		cfg := &config.Config{
 			Databases: config.DatabasesConfig{
@@ -123,13 +123,13 @@ databases:
 				},
 			},
 		}
-		
+
 		names := cfg.ListDatabases()
 		assert.Len(t, names, 2)
 		assert.Contains(t, names, "test-db")
 		assert.Contains(t, names, "other-db")
 	})
-	
+
 	t.Run("GetDatabaseNames", func(t *testing.T) {
 		cfg := &config.Config{
 			Databases: config.DatabasesConfig{
@@ -145,7 +145,7 @@ databases:
 				},
 			},
 		}
-		
+
 		names := cfg.GetDatabaseNames()
 		assert.Len(t, names, 2)
 		assert.Equal(t, config.VectorDBTypeMock, names["test-db"])
@@ -160,7 +160,7 @@ func TestConfigExtended(t *testing.T) {
 		os.Setenv("WEAVIATE_URL", "https://test.weaviate.network")
 		os.Setenv("WEAVIATE_API_KEY", "test-key")
 		os.Setenv("OPENAI_API_KEY", "test-openai-key")
-		
+
 		// Create a temporary config file with environment variable interpolation
 		configContent := `
 databases:
@@ -176,21 +176,21 @@ databases:
           type: text
           description: Test collection
 `
-		
+
 		// Write to temporary file
 		tmpFile, err := os.CreateTemp("", "test-config-env-*.yaml")
 		require.NoError(t, err)
 		defer os.Remove(tmpFile.Name())
-		
+
 		_, err = tmpFile.WriteString(configContent)
 		require.NoError(t, err)
 		tmpFile.Close()
-		
+
 		// Load config
 		cfg, err := config.LoadConfig(tmpFile.Name(), "")
 		require.NoError(t, err)
 		require.NotNil(t, cfg)
-		
+
 		// Verify config with environment variables
 		assert.Equal(t, "weaviate-cloud", cfg.Databases.Default)
 		assert.Len(t, cfg.Databases.VectorDatabases, 1)

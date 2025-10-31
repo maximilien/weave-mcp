@@ -167,7 +167,7 @@ echo "📝 Checking Markdown files..."
 if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" | grep -q .; then
     if command_exists markdownlint; then
         # Run markdownlint only on files not in excluded directories
-        if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -exec npx markdownlint {} +; then
+        if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -exec markdownlint {} +; then
             print_success "Markdown linting passed!"
         else
             print_warning "Markdown linting issues found"

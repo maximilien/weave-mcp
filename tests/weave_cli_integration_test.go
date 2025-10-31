@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2025 dr.max
 
-
 package tests
 
 import (
@@ -14,7 +13,6 @@ import (
 	"github.com/maximilien/weave-cli/src/pkg/config"
 	"github.com/maximilien/weave-cli/src/pkg/weaviate"
 )
-
 
 // TestWeaviateIntegration runs fast integration tests with Weaviate
 func TestWeaviateIntegration(t *testing.T) {

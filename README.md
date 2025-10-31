@@ -7,8 +7,9 @@ Go and designed to work seamlessly with the
 > **Recent Updates**: The server now supports both HTTP and stdio transports,
 > includes an MCP Inspector for debugging and testing, comprehensive logging and
 > monitoring capabilities, direct integration with weave-cli for code reuse,
-> a complete CI/CD pipeline with automated testing and releases, and document
-> update functionality for flexible document management workflows.
+> a complete CI/CD pipeline with automated testing and releases, document
+> update functionality for flexible document management workflows, and full
+> compatibility with Cursor 2.0's enhanced MCP interface.
 
 ## Features
 
@@ -237,14 +238,18 @@ This will:
 
 #### MCP Client Integration
 
-For stdio server integration with MCP clients like Claude Desktop:
+For stdio server integration with MCP clients like Cursor 2.0,
+Claude Desktop, and other MCP-compatible clients:
 
 ```bash
 # Show stdio server configuration
 ./start.sh stdio
 ```
 
-Add this configuration to your MCP client settings:
+**For Cursor 2.0:**
+
+Add this configuration to your Cursor MCP settings (typically in
+`~/.cursor/mcp.json` or via Cursor Settings):
 
 ```json
 {
@@ -256,6 +261,24 @@ Add this configuration to your MCP client settings:
   }
 }
 ```
+
+**For Claude Desktop:**
+
+Add this configuration to your Claude Desktop MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "weave-mcp": {
+      "command": "/path/to/weave-mcp/bin/weave-mcp-stdio",
+      "args": []
+    }
+  }
+}
+```
+
+> **Note**: The server is now compatible with Cursor 2.0's enhanced MCP
+> interface and uses MCP SDK v1.1.0 for optimal compatibility.
 
 #### Monitor logs
 

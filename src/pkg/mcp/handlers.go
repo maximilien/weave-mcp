@@ -38,8 +38,8 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 
 	description, _ := args["description"].(string)
 
-	// Create collection using Weaviate client
-	err := s.weaviate.CreateCollection(ctx, name, "text2vec-openai", nil)
+	// Create collection using Weaviate client with schema type
+	err := s.weaviate.CreateCollectionWithSchema(ctx, name, "text-embedding-3-small", nil, collectionType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create collection: %w", err)
 	}
@@ -59,8 +59,8 @@ func (s *Server) handleDeleteCollection(ctx context.Context, args map[string]int
 		return nil, fmt.Errorf("collection name is required")
 	}
 
-	// Delete collection using Weaviate client
-	err := s.weaviate.DeleteCollection(ctx, name)
+	// Delete collection schema completely using Weaviate client
+	err := s.weaviate.DeleteCollectionSchema(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete collection: %w", err)
 	}
