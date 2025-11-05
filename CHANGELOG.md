@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.1.3] - 2025-11-05
+
+### Changed
+
+- Upgraded MCP SDK from v1.0.0 to v1.1.0 for better compatibility
+- Updated README with Cursor 2.0 configuration instructions
+- Fixed default embedding configuration
+- Fixed various linting issues
+
+### Added
+
+- Full compatibility with Cursor 2.0's enhanced MCP interface
+- Compatibility note for Cursor 2.0 in documentation
+
 ## [v0.1.2] - 2025-10-14
 
 ### Changed
