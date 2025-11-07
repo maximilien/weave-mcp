@@ -78,7 +78,8 @@ jobs:
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.GitCommit=$GIT_COMMIT"
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.BuildTime=$BUILD_TIME"
 
-          # Build for different platforms
+          # Build HTTP server for different platforms
+          echo "Building HTTP server binaries..."
           GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-linux-amd64 ./src/main.go
           GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" \
@@ -90,8 +91,21 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-windows-amd64.exe ./src/main.go
 
+          # Build stdio server for different platforms
+          echo "Building stdio server binaries..."
+          GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" \
+            -o dist/weave-mcp-stdio-linux-amd64 ./src/cmd/stdio/main.go
+          GOOS=linux GOARCH=arm64 go build -ldflags "$LDFLAGS" \
+            -o dist/weave-mcp-stdio-linux-arm64 ./src/cmd/stdio/main.go
+          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
+            -o dist/weave-mcp-stdio-darwin-amd64 ./src/cmd/stdio/main.go
+          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" \
+            -o dist/weave-mcp-stdio-darwin-arm64 ./src/cmd/stdio/main.go
+          GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" \
+            -o dist/weave-mcp-stdio-windows-amd64.exe ./src/cmd/stdio/main.go
+
           # Make binaries executable
-          chmod +x dist/weave-mcp-*
+          chmod +x dist/weave-mcp-* || true
 
       - name: Create checksums
         run: |
