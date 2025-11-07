@@ -61,8 +61,14 @@ jobs:
           # Create build directory
           mkdir -p dist
 
-          # Get version information from git tag
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Get version information from git tag or workflow input
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+            # Remove 'v' prefix if present
+            VERSION=${VERSION#v}
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
           GIT_COMMIT=$(git rev-parse HEAD)
           BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
@@ -185,5 +191,6 @@ jobs:
             dist/*
           draft: false
           prerelease: false
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
