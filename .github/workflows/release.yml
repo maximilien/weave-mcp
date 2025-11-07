@@ -181,6 +181,18 @@ jobs:
           See the README for detailed API documentation and examples.
           EOF
 
+      - name: Delete existing release if present
+        run: |
+          VERSION=${{ needs.prepare.outputs.version }}
+          if gh release view "$VERSION" &>/dev/null; then
+            echo "Deleting existing release $VERSION..."
+            gh release delete "$VERSION" --yes || true
+          else
+            echo "No existing release found for $VERSION"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -191,6 +203,5 @@ jobs:
             dist/*
           draft: false
           prerelease: false
-          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
