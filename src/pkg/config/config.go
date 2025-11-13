@@ -108,8 +108,12 @@ func LoadConfigWithOptions(opts LoadConfigOptions) (*Config, error) {
 			return nil, fmt.Errorf("failed to load env file %s: %w", opts.EnvFile, err)
 		}
 	} else {
-		// Try to load .env from current directory
-		_ = godotenv.Load() // .env file is optional, so we continue without it
+		// Find config paths with proper precedence (local → global)
+		configPaths, err := FindConfigPaths()
+		if err == nil && configPaths.EnvPath != "" {
+			// Try to load .env from the discovered path
+			_ = godotenv.Load(configPaths.EnvPath) // .env file is optional
+		}
 	}
 
 	// Override with command-line flags (highest priority)
@@ -127,9 +131,16 @@ func LoadConfigWithOptions(opts LoadConfigOptions) (*Config, error) {
 	if opts.ConfigFile != "" {
 		viper.SetConfigFile(opts.ConfigFile)
 	} else {
-		viper.AddConfigPath(".")
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
+		// Find config paths with proper precedence (local → global)
+		configPaths, err := FindConfigPaths()
+		if err == nil && fileExists(configPaths.ConfigPath) {
+			viper.SetConfigFile(configPaths.ConfigPath)
+		} else {
+			// Fallback to default behavior (search in current directory)
+			viper.AddConfigPath(".")
+			viper.SetConfigType("yaml")
+			viper.SetConfigName("config")
+		}
 	}
 
 	viper.AutomaticEnv()
