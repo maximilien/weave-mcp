@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 	"github.com/maximilien/weave-mcp/src/pkg/config"
-	"github.com/maximilien/weave-mcp/src/pkg/weaviate"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +21,7 @@ import (
 type Server struct {
 	config     *config.Config
 	logger     *zap.Logger
-	weaviate   *weaviate.Client
+	dbClient   vectordb.VectorDBClient
 	corsConfig *CORSConfig
 	mu         sync.RWMutex
 	Tools      map[string]Tool
@@ -44,9 +44,9 @@ func NewServer(cfg *config.Config, logger *zap.Logger) (*Server, error) {
 		Tools:      make(map[string]Tool),
 	}
 
-	// Initialize Weaviate client
-	if err := server.initializeWeaviate(); err != nil {
-		return nil, fmt.Errorf("failed to initialize Weaviate client: %w", err)
+	// Initialize vector database client
+	if err := server.initializeVectorDB(); err != nil {
+		return nil, fmt.Errorf("failed to initialize vector database client: %w", err)
 	}
 
 	// Register tools
@@ -62,28 +62,48 @@ func (s *Server) SetCORSConfig(config *CORSConfig) {
 	s.corsConfig = config
 }
 
-// initializeWeaviate initializes the Weaviate client
-func (s *Server) initializeWeaviate() error {
+// initializeVectorDB initializes the vector database client
+func (s *Server) initializeVectorDB() error {
 	// Get the default database configuration
 	dbConfig, err := s.config.GetDefaultDatabase()
 	if err != nil {
 		return fmt.Errorf("failed to get default database: %w", err)
 	}
 
-	// Create Weaviate client configuration
-	weaviateConfig := &weaviate.Config{
-		URL:          dbConfig.URL,
-		APIKey:       dbConfig.APIKey,
-		OpenAIAPIKey: dbConfig.OpenAIAPIKey,
+	// Convert to vectordb.Config
+	vdbConfig := &vectordb.Config{
+		Type:               vectordb.VectorDBType(dbConfig.Type),
+		URL:                dbConfig.URL,
+		APIKey:             dbConfig.APIKey,
+		OpenAIAPIKey:       dbConfig.OpenAIAPIKey,
+		DatabaseURL:        dbConfig.DatabaseURL,
+		DatabaseKey:        dbConfig.DatabaseKey,
+		Timeout:            dbConfig.Timeout,
+		Enabled:            dbConfig.Enabled,
+		SimulateEmbeddings: dbConfig.SimulateEmbeddings,
+		EmbeddingDimension: dbConfig.EmbeddingDimension,
 	}
 
-	// Create Weaviate client
-	client, err := weaviate.NewClient(weaviateConfig)
+	// Create vector database client using factory pattern
+	client, err := vectordb.CreateClient(vdbConfig)
 	if err != nil {
-		return fmt.Errorf("failed to create Weaviate client: %w", err)
+		return fmt.Errorf("failed to create vector database client: %w", err)
 	}
 
-	s.weaviate = client
+	// Test the connection with a health check
+	ctx := context.Background()
+	if err := client.Health(ctx); err != nil {
+		s.logger.Warn("Vector database health check failed (non-fatal)",
+			zap.String("type", string(dbConfig.Type)),
+			zap.String("name", dbConfig.Name),
+			zap.Error(err))
+		// Don't fail - some databases may not support health checks
+	}
+
+	s.dbClient = client
+	s.logger.Info("Vector database initialized",
+		zap.String("type", string(dbConfig.Type)),
+		zap.String("name", dbConfig.Name))
 	return nil
 }
 
@@ -204,6 +224,11 @@ func (s *Server) registerTools() {
 				"description": map[string]interface{}{
 					"type":        "string",
 					"description": "Description of the collection",
+				},
+				"vectorizer": map[string]interface{}{
+					"type":        "string",
+					"description": "Embedding model/vectorizer to use (e.g., text2vec-openai, text-embedding-3-small, text-embedding-ada-002)",
+					"default":     "text2vec-openai",
 				},
 			},
 			"required": []string{"name", "type"},

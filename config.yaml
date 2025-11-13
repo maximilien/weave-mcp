@@ -34,6 +34,21 @@ databases:
           type: image
           description: Weaviate CLI image collection
 
+    # Uses Supabase Vector DB with pgvector
+    - name: supabase
+      type: supabase
+      url: ${SUPABASE_URL}
+      database_url: ${SUPABASE_DATABASE_URL}
+      database_key: ${SUPABASE_SERVICE_KEY}
+      openai_api_key: ${OPENAI_API_KEY}  # needed for vector embeddings
+      collections:
+        - name: ${SUPABASE_COLLECTION:-WeaveDocs}
+          type: text
+          description: Supabase text collection
+        - name: ${SUPABASE_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Supabase image collection
+
     # Uses a fake Vector DB for fast testing purposes
     - name: mock
       simulate_embeddings: true

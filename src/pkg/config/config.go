@@ -18,9 +18,10 @@ import (
 type VectorDBType string
 
 const (
-	VectorDBTypeCloud VectorDBType = "weaviate-cloud"
-	VectorDBTypeLocal VectorDBType = "weaviate-local"
-	VectorDBTypeMock  VectorDBType = "mock"
+	VectorDBTypeCloud    VectorDBType = "weaviate-cloud"
+	VectorDBTypeLocal    VectorDBType = "weaviate-local"
+	VectorDBTypeMock     VectorDBType = "mock"
+	VectorDBTypeSupabase VectorDBType = "supabase"
 )
 
 // Collection represents a collection configuration
@@ -52,6 +53,9 @@ type VectorDBConfig struct {
 	URL                string       `yaml:"url,omitempty"`
 	APIKey             string       `yaml:"api_key,omitempty"`
 	OpenAIAPIKey       string       `yaml:"openai_api_key,omitempty"`
+	DatabaseURL        string       `yaml:"database_url,omitempty"` // Supabase: PostgreSQL connection URL
+	DatabaseKey        string       `yaml:"database_key,omitempty"` // Supabase: service role key or anon key
+	Timeout            int          `yaml:"timeout,omitempty"`      // Connection timeout in seconds
 	Enabled            bool         `yaml:"enabled,omitempty"`
 	SimulateEmbeddings bool         `yaml:"simulate_embeddings,omitempty"`
 	EmbeddingDimension int          `yaml:"embedding_dimension,omitempty"`
