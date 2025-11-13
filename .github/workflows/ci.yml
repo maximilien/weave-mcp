@@ -23,13 +23,18 @@ jobs:
       - name: Install Go 1.24.1
         run: |
           echo "Installing Go 1.24.1..."
-          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          wget -q -O go1.24.1.linux-amd64.tar.gz https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
           rm go1.24.1.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          export PATH="/usr/local/go/bin:$PATH"
+          export GOROOT=/usr/local/go
+          export GOPATH=$HOME/go
+          go version
+          go env
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -84,13 +89,18 @@ jobs:
       - name: Install Go 1.24.1
         run: |
           echo "Installing Go 1.24.1..."
-          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          wget -q -O go1.24.1.linux-amd64.tar.gz https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
           rm go1.24.1.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          export PATH="/usr/local/go/bin:$PATH"
+          export GOROOT=/usr/local/go
+          export GOPATH=$HOME/go
+          go version
+          go env
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -133,13 +143,18 @@ jobs:
       - name: Install Go 1.24.1
         run: |
           echo "Installing Go 1.24.1..."
-          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          wget -q -O go1.24.1.linux-amd64.tar.gz https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
           rm go1.24.1.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          export PATH="/usr/local/go/bin:$PATH"
+          export GOROOT=/usr/local/go
+          export GOPATH=$HOME/go
+          go version
+          go env
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -207,13 +222,18 @@ jobs:
       - name: Install Go 1.24.1
         run: |
           echo "Installing Go 1.24.1..."
-          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          wget -q -O go1.24.1.linux-amd64.tar.gz https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
           rm go1.24.1.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          export PATH="/usr/local/go/bin:$PATH"
+          export GOROOT=/usr/local/go
+          export GOPATH=$HOME/go
+          go version
+          go env
 
       - name: Cache Go modules
         uses: actions/cache@v3
