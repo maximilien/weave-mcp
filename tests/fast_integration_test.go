@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maximilien/weave-cli/src/pkg/weaviate"
+	"github.com/maximilien/weave-cli/src/pkg/vectordb/weaviate"
 	"github.com/maximilien/weave-mcp/src/pkg/config"
 	"github.com/maximilien/weave-mcp/src/pkg/mcp"
 	"go.uber.org/zap"
