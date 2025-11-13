@@ -22,9 +22,23 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v4
+        id: setup-go
+        continue-on-error: true
         with:
           go-version: '>=1.24.0'
           check-latest: true
+      
+      - name: Install Go manually if setup-go failed
+        if: steps.setup-go.outcome == 'failure'
+        run: |
+          echo "setup-go failed, installing Go 1.24.1 manually..."
+          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+          rm go1.24.1.linux-amd64.tar.gz
+          echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          /usr/local/go/bin/go version
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -78,9 +92,23 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v4
+        id: setup-go
+        continue-on-error: true
         with:
           go-version: '>=1.24.0'
           check-latest: true
+      
+      - name: Install Go manually if setup-go failed
+        if: steps.setup-go.outcome == 'failure'
+        run: |
+          echo "setup-go failed, installing Go 1.24.1 manually..."
+          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+          rm go1.24.1.linux-amd64.tar.gz
+          echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          /usr/local/go/bin/go version
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -122,9 +150,23 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v4
+        id: setup-go
+        continue-on-error: true
         with:
           go-version: '>=1.24.0'
           check-latest: true
+      
+      - name: Install Go manually if setup-go failed
+        if: steps.setup-go.outcome == 'failure'
+        run: |
+          echo "setup-go failed, installing Go 1.24.1 manually..."
+          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+          rm go1.24.1.linux-amd64.tar.gz
+          echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          /usr/local/go/bin/go version
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -191,9 +233,23 @@ jobs:
 
       - name: Set up Go
         uses: actions/setup-go@v4
+        id: setup-go
+        continue-on-error: true
         with:
           go-version: '>=1.24.0'
           check-latest: true
+      
+      - name: Install Go manually if setup-go failed
+        if: steps.setup-go.outcome == 'failure'
+        run: |
+          echo "setup-go failed, installing Go 1.24.1 manually..."
+          wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
+          sudo rm -rf /usr/local/go
+          sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
+          rm go1.24.1.linux-amd64.tar.gz
+          echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+          /usr/local/go/bin/go version
 
       - name: Cache Go modules
         uses: actions/cache@v3
