@@ -30,11 +30,9 @@ jobs:
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          export PATH="/usr/local/go/bin:$PATH"
-          export GOROOT=/usr/local/go
-          export GOPATH=$HOME/go
-          go version
-          go env
+          /usr/local/go/bin/go version
+          /usr/local/go/bin/go env GOROOT
+          /usr/local/go/bin/go env GOPATH
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -96,11 +94,9 @@ jobs:
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          export PATH="/usr/local/go/bin:$PATH"
-          export GOROOT=/usr/local/go
-          export GOPATH=$HOME/go
-          go version
-          go env
+          /usr/local/go/bin/go version
+          /usr/local/go/bin/go env GOROOT
+          /usr/local/go/bin/go env GOPATH
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -150,11 +146,9 @@ jobs:
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          export PATH="/usr/local/go/bin:$PATH"
-          export GOROOT=/usr/local/go
-          export GOPATH=$HOME/go
-          go version
-          go env
+          /usr/local/go/bin/go version
+          /usr/local/go/bin/go env GOROOT
+          /usr/local/go/bin/go env GOPATH
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -229,11 +223,9 @@ jobs:
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          export PATH="/usr/local/go/bin:$PATH"
-          export GOROOT=/usr/local/go
-          export GOPATH=$HOME/go
-          go version
-          go env
+          /usr/local/go/bin/go version
+          /usr/local/go/bin/go env GOROOT
+          /usr/local/go/bin/go env GOPATH
 
       - name: Cache Go modules
         uses: actions/cache@v3
