@@ -23,16 +23,18 @@ jobs:
       - name: Install Go 1.24.10
         run: |
           echo "Installing Go 1.24.10..."
-          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz
+          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz || (echo "Download failed" && exit 1)
+          ls -lh go1.24.10.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz || (echo "Extraction failed" && exit 1)
           rm go1.24.10.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          /usr/local/go/bin/go version || (echo "Go version check failed" && exit 1)
           /usr/local/go/bin/go env GOROOT
           /usr/local/go/bin/go env GOPATH
+          echo "Go installation verified successfully"
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -87,16 +89,18 @@ jobs:
       - name: Install Go 1.24.10
         run: |
           echo "Installing Go 1.24.10..."
-          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz
+          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz || (echo "Download failed" && exit 1)
+          ls -lh go1.24.10.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz || (echo "Extraction failed" && exit 1)
           rm go1.24.10.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          /usr/local/go/bin/go version || (echo "Go version check failed" && exit 1)
           /usr/local/go/bin/go env GOROOT
           /usr/local/go/bin/go env GOPATH
+          echo "Go installation verified successfully"
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -139,16 +143,18 @@ jobs:
       - name: Install Go 1.24.10
         run: |
           echo "Installing Go 1.24.10..."
-          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz
+          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz || (echo "Download failed" && exit 1)
+          ls -lh go1.24.10.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz || (echo "Extraction failed" && exit 1)
           rm go1.24.10.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          /usr/local/go/bin/go version || (echo "Go version check failed" && exit 1)
           /usr/local/go/bin/go env GOROOT
           /usr/local/go/bin/go env GOPATH
+          echo "Go installation verified successfully"
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -216,16 +222,18 @@ jobs:
       - name: Install Go 1.24.10
         run: |
           echo "Installing Go 1.24.10..."
-          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz
+          wget -q -O go1.24.10.linux-amd64.tar.gz https://go.dev/dl/go1.24.10.linux-amd64.tar.gz || (echo "Download failed" && exit 1)
+          ls -lh go1.24.10.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
-          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go1.24.10.linux-amd64.tar.gz || (echo "Extraction failed" && exit 1)
           rm go1.24.10.linux-amd64.tar.gz
           echo "GOROOT=/usr/local/go" >> $GITHUB_ENV
           echo "GOPATH=$HOME/go" >> $GITHUB_ENV
           echo "/usr/local/go/bin" >> $GITHUB_PATH
-          /usr/local/go/bin/go version
+          /usr/local/go/bin/go version || (echo "Go version check failed" && exit 1)
           /usr/local/go/bin/go env GOROOT
           /usr/local/go/bin/go env GOPATH
+          echo "Go installation verified successfully"
 
       - name: Cache Go modules
         uses: actions/cache@v3
