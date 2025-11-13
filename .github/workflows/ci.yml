@@ -28,10 +28,22 @@ jobs:
           go-version: '>=1.24.0'
           check-latest: true
       
-      - name: Install Go manually if setup-go failed
-        if: steps.setup-go.outcome == 'failure'
+      - name: Verify Go installation
+        id: verify-go
         run: |
-          echo "setup-go failed, installing Go 1.24.1 manually..."
+          if command -v go &> /dev/null; then
+            GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+            echo "Go version: $GO_VERSION"
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Go not found in PATH"
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install Go manually if not available
+        if: steps.verify-go.outputs.installed == 'false'
+        run: |
+          echo "Installing Go 1.24.1 manually..."
           wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
@@ -98,10 +110,22 @@ jobs:
           go-version: '>=1.24.0'
           check-latest: true
       
-      - name: Install Go manually if setup-go failed
-        if: steps.setup-go.outcome == 'failure'
+      - name: Verify Go installation
+        id: verify-go
         run: |
-          echo "setup-go failed, installing Go 1.24.1 manually..."
+          if command -v go &> /dev/null; then
+            GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+            echo "Go version: $GO_VERSION"
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Go not found in PATH"
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install Go manually if not available
+        if: steps.verify-go.outputs.installed == 'false'
+        run: |
+          echo "Installing Go 1.24.1 manually..."
           wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
@@ -156,10 +180,22 @@ jobs:
           go-version: '>=1.24.0'
           check-latest: true
       
-      - name: Install Go manually if setup-go failed
-        if: steps.setup-go.outcome == 'failure'
+      - name: Verify Go installation
+        id: verify-go
         run: |
-          echo "setup-go failed, installing Go 1.24.1 manually..."
+          if command -v go &> /dev/null; then
+            GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+            echo "Go version: $GO_VERSION"
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Go not found in PATH"
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install Go manually if not available
+        if: steps.verify-go.outputs.installed == 'false'
+        run: |
+          echo "Installing Go 1.24.1 manually..."
           wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
@@ -239,10 +275,22 @@ jobs:
           go-version: '>=1.24.0'
           check-latest: true
       
-      - name: Install Go manually if setup-go failed
-        if: steps.setup-go.outcome == 'failure'
+      - name: Verify Go installation
+        id: verify-go
         run: |
-          echo "setup-go failed, installing Go 1.24.1 manually..."
+          if command -v go &> /dev/null; then
+            GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
+            echo "Go version: $GO_VERSION"
+            echo "installed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Go not found in PATH"
+            echo "installed=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install Go manually if not available
+        if: steps.verify-go.outputs.installed == 'false'
+        run: |
+          echo "Installing Go 1.24.1 manually..."
           wget -q https://go.dev/dl/go1.24.1.linux-amd64.tar.gz
           sudo rm -rf /usr/local/go
           sudo tar -C /usr/local -xzf go1.24.1.linux-amd64.tar.gz
