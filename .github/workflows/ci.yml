@@ -23,7 +23,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -78,7 +78,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -121,7 +121,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
 
       - name: Cache Go modules
         uses: actions/cache@v3
@@ -189,7 +189,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
 
       - name: Cache Go modules
         uses: actions/cache@v3
