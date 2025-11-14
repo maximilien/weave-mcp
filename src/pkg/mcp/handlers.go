@@ -7,15 +7,48 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 )
+
+// enhanceError adds helpful context to database errors
+func enhanceError(operation string, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	errStr := err.Error()
+
+	// Check for common connection/network errors
+	if strings.Contains(errStr, "connection refused") ||
+		strings.Contains(errStr, "dial tcp") ||
+		strings.Contains(errStr, "no such host") {
+		return fmt.Errorf("%s: database connection failed - please check if the database is running and accessible. Original error: %w", operation, err)
+	}
+
+	// Check for timeout errors
+	if strings.Contains(errStr, "context deadline exceeded") ||
+		strings.Contains(errStr, "timeout") {
+		return fmt.Errorf("%s: operation timed out - database may be slow or unreachable. Original error: %w", operation, err)
+	}
+
+	// Check for authentication errors
+	if strings.Contains(errStr, "authentication failed") ||
+		strings.Contains(errStr, "unauthorized") ||
+		strings.Contains(errStr, "invalid credentials") {
+		return fmt.Errorf("%s: authentication failed - please check your API key or credentials. Original error: %w", operation, err)
+	}
+
+	// Default: return original error
+	return fmt.Errorf("%s: %w", operation, err)
+}
 
 // handleListCollections handles the list_collections tool
 func (s *Server) handleListCollections(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	collections, err := s.dbClient.ListCollections(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list collections: %w", err)
+		return nil, enhanceError("failed to list collections", err)
 	}
 
 	// Convert to string array for consistent output
@@ -76,7 +109,7 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 
 	err := s.dbClient.CreateCollection(ctx, name, schema)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create collection: %w", err)
+		return nil, enhanceError("failed to create collection", err)
 	}
 
 	return map[string]interface{}{
@@ -97,7 +130,7 @@ func (s *Server) handleDeleteCollection(ctx context.Context, args map[string]int
 
 	err := s.dbClient.DeleteCollection(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete collection: %w", err)
+		return nil, enhanceError("failed to delete collection", err)
 	}
 
 	return map[string]interface{}{
@@ -124,7 +157,7 @@ func (s *Server) handleListDocuments(ctx context.Context, args map[string]interf
 
 	documents, err := s.dbClient.ListDocuments(ctx, collection, limit, 0)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list documents: %w", err)
+		return nil, enhanceError("failed to list documents", err)
 	}
 
 	// Convert documents to a more MCP-friendly format
@@ -178,7 +211,7 @@ func (s *Server) handleCreateDocument(ctx context.Context, args map[string]inter
 
 	err := s.dbClient.CreateDocument(ctx, collection, doc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create document: %w", err)
+		return nil, enhanceError("failed to create document", err)
 	}
 
 	return map[string]interface{}{
@@ -241,7 +274,7 @@ func (s *Server) handleBatchCreateDocuments(ctx context.Context, args map[string
 	// Create all documents in batch
 	err := s.dbClient.CreateDocuments(ctx, collection, documents)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create documents in batch: %w", err)
+		return nil, enhanceError("failed to create documents in batch", err)
 	}
 
 	return map[string]interface{}{
@@ -266,7 +299,7 @@ func (s *Server) handleGetDocument(ctx context.Context, args map[string]interfac
 	// Get document using vectordb client
 	doc, err := s.dbClient.GetDocument(ctx, collection, documentID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get document: %w", err)
+		return nil, enhanceError("failed to get document", err)
 	}
 
 	return map[string]interface{}{
@@ -294,7 +327,7 @@ func (s *Server) handleDeleteDocument(ctx context.Context, args map[string]inter
 	// Delete document using vectordb client
 	err := s.dbClient.DeleteDocument(ctx, collection, documentID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete document: %w", err)
+		return nil, enhanceError("failed to delete document", err)
 	}
 
 	return map[string]interface{}{
@@ -314,7 +347,7 @@ func (s *Server) handleCountDocuments(ctx context.Context, args map[string]inter
 	// Count documents using vectordb client
 	count, err := s.dbClient.GetCollectionCount(ctx, collection)
 	if err != nil {
-		return nil, fmt.Errorf("failed to count documents: %w", err)
+		return nil, enhanceError("failed to count documents", err)
 	}
 
 	return map[string]interface{}{
@@ -351,7 +384,7 @@ func (s *Server) handleQueryDocuments(ctx context.Context, args map[string]inter
 
 	results, err := s.dbClient.SearchSemantic(ctx, collection, query, queryOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query documents: %w", err)
+		return nil, enhanceError("failed to query documents", err)
 	}
 
 	// Convert results to a more MCP-friendly format
@@ -402,7 +435,7 @@ func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]inter
 	// Get the existing document first
 	doc, err := s.dbClient.GetDocument(ctx, collection, documentID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get existing document: %w", err)
+		return nil, enhanceError("failed to get existing document", err)
 	}
 
 	// Update the fields
@@ -422,7 +455,7 @@ func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]inter
 	// Update document using vectordb client
 	err = s.dbClient.UpdateDocument(ctx, collection, doc)
 	if err != nil {
-		return nil, fmt.Errorf("failed to update document: %w", err)
+		return nil, enhanceError("failed to update document", err)
 	}
 
 	return map[string]interface{}{

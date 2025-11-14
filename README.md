@@ -382,11 +382,33 @@ databases:
 
 The MCP server exposes the following HTTP endpoints:
 
-- `GET /health` - Health check
+- `GET /health` - Health check (includes database status)
 - `GET /mcp/tools/list` - List available MCP tools
 - `POST /mcp/tools/call` - Execute an MCP tool
 
 ### Example API Usage
+
+#### Health check
+
+```bash
+curl http://localhost:8030/health
+```
+
+Returns:
+
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-11-14T19:22:26Z",
+  "database": {
+    "status": "healthy",
+    "type": "weaviate-cloud",
+    "name": "weaviate-cloud"
+  }
+}
+```
+
+Returns HTTP 503 if database is unhealthy.
 
 #### List available tools
 

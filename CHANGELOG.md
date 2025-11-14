@@ -48,6 +48,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Significantly faster than individual document creation for large datasets
   - Full validation and error reporting for batch operations
 
+- **Enhanced Health Checks**: Comprehensive database health monitoring
+  - Health endpoint now includes database status (healthy/unhealthy)
+  - Returns database type and name information
+  - HTTP 503 status when database is unhealthy
+  - 5-second timeout for database health checks
+
+- **Improved Error Messages**: User-friendly error reporting
+  - Enhanced error messages for common failure scenarios
+  - Connection errors: "database connection failed - please check if the
+    database is running and accessible"
+  - Timeout errors: "operation timed out - database may be slow or
+    unreachable"
+  - Authentication errors: "authentication failed - please check your API
+    key or credentials"
+  - Applied to all MCP tool handlers for consistent error reporting
+
 ### Changed
 
 - **Dependency Upgrade**: Updated weave-cli from v0.2.14 to v0.3.11

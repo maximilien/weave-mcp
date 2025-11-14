@@ -469,13 +469,52 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check database health
+	dbStatus := "healthy"
+	dbError := ""
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := s.dbClient.Health(ctx); err != nil {
+		dbStatus = "unhealthy"
+		dbError = err.Error()
+		s.logger.Warn("Database health check failed", zap.Error(err))
+	}
+
+	// Get database type from config
+	dbConfig, _ := s.config.GetDefaultDatabase()
+	dbType := "unknown"
+	dbName := "unknown"
+	if dbConfig != nil {
+		dbType = string(dbConfig.Type)
+		dbName = dbConfig.Name
+	}
+
+	// Overall status is healthy only if database is healthy
+	overallStatus := "healthy"
+	httpStatus := http.StatusOK
+	if dbStatus != "healthy" {
+		overallStatus = "degraded"
+		httpStatus = http.StatusServiceUnavailable
+	}
+
 	response := map[string]interface{}{
-		"status":    "healthy",
+		"status":    overallStatus,
 		"timestamp": time.Now().UTC(),
 		"version":   "dev",
+		"database": map[string]interface{}{
+			"status": dbStatus,
+			"type":   dbType,
+			"name":   dbName,
+		},
+	}
+
+	if dbError != "" {
+		response["database"].(map[string]interface{})["error"] = dbError
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(httpStatus)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		s.logger.Error("Failed to encode health response", zap.Error(err))
 	}
