@@ -47,7 +47,7 @@ show_status() {
     check_service 8030 "Weave MCP Server"
     local mcp_pid
     mcp_pid=$(get_mcp_pid)
-    if [ ! -z "$mcp_pid" ]; then
+    if [ -n "$mcp_pid" ]; then
         echo -e "${GREEN}✅ Weave MCP Server is running (PID: $mcp_pid)${NC}"
     else
         echo -e "${RED}❌ Weave MCP Server is not running${NC}"
@@ -57,7 +57,7 @@ show_status() {
     # Check MCP Inspector
     local inspector_pid
     inspector_pid=$(get_inspector_pid)
-    if [ ! -z "$inspector_pid" ] && ps -p "$inspector_pid" > /dev/null 2>&1; then
+    if [ -n "$inspector_pid" ] && ps -p "$inspector_pid" > /dev/null 2>&1; then
         echo -e "${GREEN}✅ MCP Inspector is running (PID: $inspector_pid)${NC}"
     else
         echo -e "${RED}❌ MCP Inspector is not running${NC}"
@@ -138,7 +138,7 @@ tail_inspector_logs() {
     local inspector_pid
     inspector_pid=$(get_inspector_pid)
     
-    if [ ! -z "$inspector_pid" ] && ps -p "$inspector_pid" > /dev/null 2>&1; then
+    if [ -n "$inspector_pid" ] && ps -p "$inspector_pid" > /dev/null 2>&1; then
         if [ -f "mcp-inspector.log" ]; then
             echo -e "${BLUE}Following MCP Inspector log file...${NC}"
             echo -e "${YELLOW}Press Ctrl+C to stop monitoring${NC}"
