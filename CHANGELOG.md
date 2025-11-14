@@ -77,8 +77,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Dependency Upgrade**: Updated weave-cli from v0.2.14 to v0.3.11
-  - Includes all features from weave-cli releases v0.2.14 through v0.3.11
+- **Dependency Upgrade**: Updated weave-cli from v0.2.14 to v0.3.12
+  - Includes all features from weave-cli releases v0.2.14 through v0.3.12
   - New vectordb abstraction layer
   - Supabase adapter
   - Enhanced configuration management
