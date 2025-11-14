@@ -10,23 +10,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Supabase Vector Database Support**: Full support for Supabase as a vector database backend
+- **Supabase Vector Database Support**: Full support for Supabase as a
+  vector database backend
   - Added Supabase configuration to `config.yaml`
   - Supabase-specific fields: `database_url` and `database_key`
   - Works seamlessly with OpenAI embeddings via Supabase adapter
 
-- **Multi-Database Architecture**: Refactored to support multiple vector databases through abstraction layer
-  - Replaced direct Weaviate client with generic `vectordb.VectorDBClient` interface
+- **Multi-Database Architecture**: Refactored to support multiple vector
+  databases through abstraction layer
+  - Replaced direct Weaviate client with generic `vectordb.VectorDBClient`
+    interface
   - Support for Weaviate (Cloud & Local), Supabase, Mock databases
   - Factory pattern for database client creation
 
-- **Enhanced Embedding Support**: Configurable embedding models and vectorizers
+- **Enhanced Embedding Support**: Configurable embedding models and
+  vectorizers
   - Added `vectorizer` parameter to `create_collection` MCP tool
-  - Support for multiple embedding models (text2vec-openai, text-embedding-3-small, text-embedding-ada-002)
+  - Support for multiple embedding models (text2vec-openai,
+    text-embedding-3-small, text-embedding-3-large, text-embedding-ada-002)
   - Default vectorizer: text2vec-openai
+  - Comprehensive embedding documentation in config examples
+  - Updated `.env.example` with Supabase configuration and embedding
+    model info
+  - Updated `config.yaml.example` with detailed embedding model
+    descriptions
 
-- **Global Configuration Support**: Support for `~/.weave-cli` global configuration directory
-  - Configuration precedence: local `.env`/`config.yaml` → global `~/.weave-cli`
+- **Global Configuration Support**: Support for `~/.weave-cli` global
+  configuration directory
+  - Configuration precedence: local `.env`/`config.yaml` → global
+    `~/.weave-cli`
   - Shared configuration with weave-cli tool
 
 ### Changed

@@ -10,7 +10,7 @@ schemas_dir: ./schemas
 # Database Configuration
 databases:
   # Default database type to use
-  # Options: weaviate-cloud, weaviate-local, mock
+  # Options: weaviate-cloud, weaviate-local, supabase, mock
   default: ${VECTOR_DB_TYPE:-weaviate-cloud}
   
   # Available vector databases
@@ -18,6 +18,11 @@ databases:
     
     # Weaviate Cloud (Paid Service)
     # Requires: WEAVIATE_URL, WEAVIATE_API_KEY, OPENAI_API_KEY
+    # Embedding Models: Configure via 'vectorizer' parameter in create_collection
+    #   - text2vec-openai (default, auto-selects best model)
+    #   - text-embedding-3-small (fastest, cost-effective)
+    #   - text-embedding-3-large (highest quality)
+    #   - text-embedding-ada-002 (legacy, still supported)
     - name: weaviate-cloud
       type: weaviate-cloud
       url: ${WEAVIATE_URL}                    # Your Weaviate Cloud URL
@@ -46,6 +51,26 @@ databases:
         - name: ${WEAVIATE_COLLECTION_IMAGES:-WeaveImages}
           type: image
           description: Image documents collection
+
+    # Supabase with pgvector (Paid/Free Tier Available)
+    # Requires: SUPABASE_URL, SUPABASE_DATABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: supabase
+      type: supabase
+      url: ${SUPABASE_URL}                    # Supabase project URL (https://xxx.supabase.co)
+      database_url: ${SUPABASE_DATABASE_URL}  # PostgreSQL connection string
+      database_key: ${SUPABASE_SERVICE_KEY}   # Service role key (not anon key)
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${SUPABASE_COLLECTION:-WeaveDocs}
+          type: text
+          description: Supabase text collection
+        - name: ${SUPABASE_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Supabase image collection
 
     # Mock Database (For Testing)
     # No external dependencies required
@@ -130,10 +155,27 @@ databases:
           type: string
 
 # Environment Variables Reference:
-# VECTOR_DB_TYPE: Database type to use (weaviate-cloud, weaviate-local, mock)
+# VECTOR_DB_TYPE: Database type (weaviate-cloud, weaviate-local, supabase, mock)
+#
+# Weaviate Configuration:
 # WEAVIATE_URL: Your Weaviate Cloud URL
 # WEAVIATE_API_KEY: Your Weaviate Cloud API key
-# OPENAI_API_KEY: OpenAI API key for embeddings (required for weaviate-cloud)
 # WEAVIATE_COLLECTION: Main text collection name
 # WEAVIATE_COLLECTION_IMAGES: Image collection name
 # WEAVIATE_COLLECTION_TEST: Test collection name
+#
+# Supabase Configuration:
+# SUPABASE_URL: Supabase project URL (https://xxx.supabase.co)
+# SUPABASE_DATABASE_URL: PostgreSQL connection string
+# SUPABASE_SERVICE_KEY: Supabase service role key (not anon key)
+# SUPABASE_COLLECTION: Main text collection name
+# SUPABASE_COLLECTION_IMAGES: Image collection name
+#
+# Embedding Configuration (Required for all vector databases except mock):
+# OPENAI_API_KEY: OpenAI API key for embedding generation
+#
+# Embedding Models (configured via 'vectorizer' in create_collection tool):
+#   - text2vec-openai: Default for Weaviate (auto-selects best model)
+#   - text-embedding-3-small: Fast, cost-effective (1536 dims)
+#   - text-embedding-3-large: Highest quality (3072 dims)
+#   - text-embedding-ada-002: Legacy model (1536 dims)
