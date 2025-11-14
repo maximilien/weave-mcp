@@ -45,6 +45,9 @@ jobs:
           chmod +x ./setup.sh
           ./setup.sh
 
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
       - name: Run Go vulnerability check
         run: |
           echo "Running comprehensive security checks..."
