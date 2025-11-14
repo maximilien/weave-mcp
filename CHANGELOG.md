@@ -41,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `~/.weave-cli`
   - Shared configuration with weave-cli tool
 
+- **Batch Operations**: Efficient bulk document creation
+  - Added `batch_create_documents` MCP tool for creating multiple documents
+    in a single operation
+  - Accepts array of documents with url, text, and metadata
+  - Significantly faster than individual document creation for large datasets
+  - Full validation and error reporting for batch operations
+
 ### Changed
 
 - **Dependency Upgrade**: Updated weave-cli from v0.2.14 to v0.3.11

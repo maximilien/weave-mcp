@@ -190,6 +190,67 @@ func (s *Server) handleCreateDocument(ctx context.Context, args map[string]inter
 	}, nil
 }
 
+// handleBatchCreateDocuments handles the batch_create_documents tool
+func (s *Server) handleBatchCreateDocuments(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collection, ok := args["collection"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	documentsArg, ok := args["documents"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("documents array is required")
+	}
+
+	if len(documentsArg) == 0 {
+		return nil, fmt.Errorf("documents array cannot be empty")
+	}
+
+	// Parse and validate all documents first
+	documents := make([]*vectordb.Document, 0, len(documentsArg))
+	for i, docArg := range documentsArg {
+		docMap, ok := docArg.(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("document at index %d is not a valid object", i)
+		}
+
+		url, ok := docMap["url"].(string)
+		if !ok {
+			return nil, fmt.Errorf("document at index %d: URL is required", i)
+		}
+
+		text, ok := docMap["text"].(string)
+		if !ok {
+			return nil, fmt.Errorf("document at index %d: text is required", i)
+		}
+
+		metadata, _ := docMap["metadata"].(map[string]interface{})
+		if metadata == nil {
+			metadata = make(map[string]interface{})
+		}
+
+		doc := &vectordb.Document{
+			URL:      url,
+			Text:     text,
+			Content:  text, // Use text as content
+			Metadata: metadata,
+		}
+		documents = append(documents, doc)
+	}
+
+	// Create all documents in batch
+	err := s.dbClient.CreateDocuments(ctx, collection, documents)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create documents in batch: %w", err)
+	}
+
+	return map[string]interface{}{
+		"collection": collection,
+		"count":      len(documents),
+		"status":     "created",
+	}, nil
+}
+
 // handleGetDocument handles the get_document tool
 func (s *Server) handleGetDocument(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	collection, ok := args["collection"].(string)

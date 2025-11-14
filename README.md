@@ -56,6 +56,8 @@ The server exposes the following MCP tools:
 
 - `list_documents` - List documents in a collection with pagination
 - `create_document` - Create a new document in a collection
+- `batch_create_documents` - Create multiple documents in a single batch
+  operation
 - `get_document` - Retrieve a specific document by ID
 - `update_document` - Update a document's content or metadata
 - `delete_document` - Delete a document from a collection

@@ -304,6 +304,45 @@ func (s *Server) registerTools() {
 	})
 
 	s.registerTool(Tool{
+		Name:        "batch_create_documents",
+		Description: "Create multiple documents in a collection in a single batch operation",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"documents": map[string]interface{}{
+					"type":        "array",
+					"description": "Array of documents to create",
+					"items": map[string]interface{}{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"url": map[string]interface{}{
+								"type":        "string",
+								"description": "URL of the document",
+							},
+							"text": map[string]interface{}{
+								"type":        "string",
+								"description": "Text content of the document",
+							},
+							"metadata": map[string]interface{}{
+								"type":        "object",
+								"description": "Additional metadata for the document",
+								"default":     map[string]interface{}{},
+							},
+						},
+						"required": []string{"url", "text"},
+					},
+				},
+			},
+			"required": []string{"collection", "documents"},
+		},
+		Handler: s.handleBatchCreateDocuments,
+	})
+
+	s.registerTool(Tool{
 		Name:        "get_document",
 		Description: "Get a specific document by ID",
 		InputSchema: map[string]interface{}{
