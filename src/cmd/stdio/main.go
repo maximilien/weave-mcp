@@ -17,6 +17,11 @@ import (
 	"github.com/maximilien/weave-mcp/src/pkg/version"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.uber.org/zap"
+
+	// Import vectordb implementations to register their factories
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/mock"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/supabase"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/weaviate"
 )
 
 func main() {
@@ -51,9 +56,9 @@ func main() {
 	}
 	defer logFile.Close()
 
-	// Create logger with both console and file output
+	// Create logger with stderr and file output (NOT stdout - that's for JSON-RPC!)
 	zapConfig := zap.NewProductionConfig()
-	zapConfig.OutputPaths = []string{"stdout", logFile.Name()}
+	zapConfig.OutputPaths = []string{"stderr", logFile.Name()}
 	zapConfig.ErrorOutputPaths = []string{"stderr", logFile.Name()}
 
 	logger, err := zapConfig.Build()
