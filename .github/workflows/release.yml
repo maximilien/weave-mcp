@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g., v0.0.1)'
+        description: 'Release tag (e.g., v0.2.0)'
         required: true
         type: string
 
@@ -54,7 +54,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.24'
 
       - name: Build for multiple platforms
         run: |
@@ -187,7 +187,9 @@ jobs:
           - `delete_collection` - Delete a collection
           - `list_documents` - List documents in a collection
           - `create_document` - Create a new document
+          - `batch_create_documents` - Create multiple documents at once
           - `get_document` - Retrieve a specific document
+          - `update_document` - Update a document's content or metadata
           - `delete_document` - Delete a document
           - `count_documents` - Count documents in a collection
           - `query_documents` - Perform semantic search

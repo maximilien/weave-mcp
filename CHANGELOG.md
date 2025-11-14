@@ -64,6 +64,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     key or credentials"
   - Applied to all MCP tool handlers for consistent error reporting
 
+- **CI/CD Improvements**: Refactored GitHub Actions workflows
+  - Split monolithic ci.yml into separate workflow files (build, lint,
+    test, security)
+  - Aligned workflow structure with weave-cli project for consistency
+  - Added cross-compilation verification for all platforms
+  - Added CodeQL security analysis for main/develop branches
+  - Improved matrix builds for Ubuntu, macOS, and Windows
+  - Daily security scans with cron schedule
+
 ### Changed
 
 - **Dependency Upgrade**: Updated weave-cli from v0.2.14 to v0.3.11
