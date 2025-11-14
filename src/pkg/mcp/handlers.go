@@ -96,6 +96,10 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 				Name:     "url",
 				DataType: []string{"text"},
 			},
+			{
+				Name:     "metadata",
+				DataType: []string{"text"},
+			},
 		},
 	}
 
