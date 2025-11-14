@@ -60,7 +60,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Failed to sync logger: %v", err)
+		}
+	}()
 
 	// Create MCP server using our existing implementation
 	internalServer, err := internalmcp.NewServer(cfg, logger)

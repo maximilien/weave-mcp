@@ -69,7 +69,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Failed to sync logger: %v", err)
+		}
+	}()
 
 	// Parse CORS configuration with environment variable fallbacks
 	corsOriginsEnv := os.Getenv("CORS_ORIGINS")
