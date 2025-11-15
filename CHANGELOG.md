@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.2.1] - 2025-11-15
+
 ### Changed
 
 - **Dependency Upgrade**: Updated weave-cli from v0.3.12 to v0.3.14
@@ -16,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Documentation improvements and demo updates
   - Note: Binary size increased due to OpenTelemetry dependencies
     (stdio: 9.6M → 36M)
+
+### Fixed
+
+- Removed local replace directive from go.mod that was causing CI failures
+- Fixed logger output in stdio mode (stdout → stderr for JSON-RPC compatibility)
+- Registered all vectordb implementations (mock, supabase, weaviate) for runtime availability
 
 ## [v0.2.0] - 2025-11-14
 
