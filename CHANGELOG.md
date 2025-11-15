@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Dependency Upgrade**: Updated weave-cli from v0.3.12 to v0.3.14
+  - Improved REPL functionality with real-time status updates
+  - Enhanced embedding tests for Weaviate and Supabase
+  - Documentation improvements and demo updates
+  - Note: Binary size increased due to OpenTelemetry dependencies
+    (stdio: 9.6M → 36M)
+
 ## [v0.2.0] - 2025-11-14
 
 ### Added

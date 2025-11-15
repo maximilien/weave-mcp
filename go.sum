@@ -132,8 +132,8 @@ github.com/mattn/go-colorable v0.1.13/go.mod h1:7S9/ev0klgBDR4GtXTXX8a3vIGJpMovk
 github.com/mattn/go-isatty v0.0.16/go.mod h1:kYGgaQfpe5nmfYZH+SKPsOc2e4SrIfOl2e/yFXSvRLM=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
-github.com/maximilien/weave-cli v0.3.12 h1:JXjxorEDKq81tfj0x5KhXnmWWuYjo6CfsyMRfuk0wJQ=
-github.com/maximilien/weave-cli v0.3.12/go.mod h1:9xPwW3fhkVecVWbeGEuEMT6EDpHAfCr84KfHLqmLfQs=
+github.com/maximilien/weave-cli v0.3.14 h1:bV6vXE0WoWJ/g8N5Ok2R8KYE8iPDn9JojQB0xwjleEw=
+github.com/maximilien/weave-cli v0.3.14/go.mod h1:9xPwW3fhkVecVWbeGEuEMT6EDpHAfCr84KfHLqmLfQs=
 github.com/mitchellh/mapstructure v1.3.3/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.4.1/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyuac5Z2hdY=
