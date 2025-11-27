@@ -8,6 +8,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.0] - 2025-11-27
+
+### Added
+
+- **MongoDB Atlas Vector Search Support**: Full support for MongoDB as a
+  vector database backend
+  - Automatic embedding generation for MongoDB documents
+  - MongoDB-specific configuration in `config.yaml.example`
+  - Environment variables: MONGODB_URI, MONGODB_DATABASE
+
+- **Milvus Vector Database Support**: Complete support for Milvus (local
+  and cloud)
+  - Local and cloud Milvus deployments
+  - Milvus-specific configuration examples
+  - Environment variables: MILVUS_HOST, MILVUS_PORT, MILVUS_API_KEY
+
+- **Chroma Vector Database Support**: Production-ready Chroma Cloud support
+  - Chroma local and cloud deployments
+  - Chroma-specific configuration examples
+  - Environment variables: CHROMA_URL, CHROMA_API_KEY
+  - Note: Windows not supported due to CGO dependencies
+
+### Changed
+
+- **Dependency Upgrade**: Updated weave-cli from v0.3.14 to v0.6.0
+  - MongoDB Atlas Vector Search support (v0.4.0)
+  - Milvus vector database support (v0.5.0)
+  - Chroma vector database support (v0.6.0)
+  - Enhanced error messages for collection operations
+  - Improved integration test coverage across all VDBs
+  - Bug fixes for MongoDB, Supabase, and Weaviate
+
+- **Configuration Files**: Updated config.yaml.example and .env.example
+  - Added MongoDB configuration section
+  - Added Milvus configuration section
+  - Added Chroma configuration section
+  - Updated VECTOR_DB_TYPE options list
+
+- **Binary Size**: stdio server increased to ~37M (due to new VDB clients)
+
+### Fixed
+
+- Collection deletion fixes for all VDB types
+- Improved error handling for collection operations
+- Fixed nil pointer dereferences in integration tests
+
 ## [v0.2.1] - 2025-11-15
 
 ### Changed
@@ -22,8 +68,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Removed local replace directive from go.mod that was causing CI failures
-- Fixed logger output in stdio mode (stdout → stderr for JSON-RPC compatibility)
-- Registered all vectordb implementations (mock, supabase, weaviate) for runtime availability
+- Fixed logger output in stdio mode (stdout → stderr for JSON-RPC
+  compatibility)
+- Registered all vectordb implementations (mock, supabase, weaviate) for
+  runtime availability
 
 ## [v0.2.0] - 2025-11-14
 

@@ -37,3 +37,6 @@ logs/*.log
 logs/*.txt
 *.log
 *.pid
+
+# Working TODOs
+TODOs-weave-cli.md
