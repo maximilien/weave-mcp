@@ -14,7 +14,8 @@ Go and designed to work seamlessly with the
 ## Features
 
 - **Dual Transport Support**: HTTP and stdio MCP transports
-- **Vector Database Support**: Weaviate, Milvus, and Mock databases
+- **Vector Database Support**: Weaviate, Supabase, MongoDB, Milvus, Chroma,
+  and Mock databases
 - **MCP Tools**: Complete set of tools for collection and document management
 - **MCP Inspector**: Web-based debugging and testing interface
 - **Configuration**: YAML + Environment Variables

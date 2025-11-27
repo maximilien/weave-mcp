@@ -72,6 +72,64 @@ databases:
           type: image
           description: Supabase image collection
 
+    # MongoDB Atlas Vector Search (Paid/Free Tier Available)
+    # Requires: MONGODB_URI, MONGODB_DATABASE, OPENAI_API_KEY
+    # Embedding Models: Uses OpenAI client for automatic embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: mongodb
+      type: mongodb
+      url: ${MONGODB_URI}                     # MongoDB connection string
+      database_url: ${MONGODB_DATABASE}       # Database name
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${MONGODB_COLLECTION:-WeaveDocs}
+          type: text
+          description: MongoDB text collection
+        - name: ${MONGODB_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: MongoDB image collection
+
+    # Milvus Vector Database (Open Source/Cloud)
+    # Requires: MILVUS_HOST, MILVUS_PORT, OPENAI_API_KEY
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: milvus
+      type: milvus
+      url: ${MILVUS_HOST}:${MILVUS_PORT}      # Milvus server address
+      api_key: ${MILVUS_API_KEY}              # Optional: Milvus Cloud API key
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${MILVUS_COLLECTION:-WeaveDocs}
+          type: text
+          description: Milvus text collection
+        - name: ${MILVUS_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Milvus image collection
+
+    # Chroma Vector Database (Open Source/Cloud)
+    # Requires: CHROMA_URL, OPENAI_API_KEY
+    # Note: Not supported on Windows due to CGO dependencies
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: chroma
+      type: chroma
+      url: ${CHROMA_URL}                      # Chroma server URL
+      api_key: ${CHROMA_API_KEY}              # Optional: Chroma Cloud API key
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${CHROMA_COLLECTION:-WeaveDocs}
+          type: text
+          description: Chroma text collection
+        - name: ${CHROMA_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Chroma image collection
+
     # Mock Database (For Testing)
     # No external dependencies required
     - name: mock
@@ -155,7 +213,8 @@ databases:
           type: string
 
 # Environment Variables Reference:
-# VECTOR_DB_TYPE: Database type (weaviate-cloud, weaviate-local, supabase, mock)
+# VECTOR_DB_TYPE: Database type (weaviate-cloud, weaviate-local, supabase,
+#                 mongodb, milvus, chroma, mock)
 #
 # Weaviate Configuration:
 # WEAVIATE_URL: Your Weaviate Cloud URL
@@ -170,6 +229,25 @@ databases:
 # SUPABASE_SERVICE_KEY: Supabase service role key (not anon key)
 # SUPABASE_COLLECTION: Main text collection name
 # SUPABASE_COLLECTION_IMAGES: Image collection name
+#
+# MongoDB Configuration:
+# MONGODB_URI: MongoDB connection string (mongodb+srv://...)
+# MONGODB_DATABASE: Database name
+# MONGODB_COLLECTION: Main text collection name
+# MONGODB_COLLECTION_IMAGES: Image collection name
+#
+# Milvus Configuration:
+# MILVUS_HOST: Milvus server host (localhost or cloud endpoint)
+# MILVUS_PORT: Milvus server port (default: 19530)
+# MILVUS_API_KEY: Optional Milvus Cloud API key
+# MILVUS_COLLECTION: Main text collection name
+# MILVUS_COLLECTION_IMAGES: Image collection name
+#
+# Chroma Configuration:
+# CHROMA_URL: Chroma server URL (http://localhost:8000 or cloud endpoint)
+# CHROMA_API_KEY: Optional Chroma Cloud API key
+# CHROMA_COLLECTION: Main text collection name
+# CHROMA_COLLECTION_IMAGES: Image collection name
 #
 # Embedding Configuration (Required for all vector databases except mock):
 # OPENAI_API_KEY: OpenAI API key for embedding generation
