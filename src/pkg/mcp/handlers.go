@@ -8,47 +8,81 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 )
 
-// enhanceError adds helpful context to database errors
-func enhanceError(operation string, err error) error {
+// enhanceError adds helpful context to database errors with VDB type prefix
+func (s *Server) enhanceError(operation string, err error) error {
 	if err == nil {
 		return nil
 	}
 
+	// Get database type from config
+	dbConfig, err := s.config.GetDefaultDatabase()
+	if err != nil {
+		// Fallback if we can't get config
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+
+	vdbType := string(dbConfig.Type)
 	errStr := err.Error()
 
 	// Check for common connection/network errors
 	if strings.Contains(errStr, "connection refused") ||
 		strings.Contains(errStr, "dial tcp") ||
 		strings.Contains(errStr, "no such host") {
-		return fmt.Errorf("%s: database connection failed - please check if the database is running and accessible. Original error: %w", operation, err)
+		return fmt.Errorf("%s: %s: database connection failed - please check if the database is running and accessible. Original error: %w", vdbType, operation, err)
 	}
 
 	// Check for timeout errors
 	if strings.Contains(errStr, "context deadline exceeded") ||
 		strings.Contains(errStr, "timeout") {
-		return fmt.Errorf("%s: operation timed out - database may be slow or unreachable. Original error: %w", operation, err)
+		return fmt.Errorf("%s: %s: operation timed out - database may be slow or unreachable. Original error: %w", vdbType, operation, err)
 	}
 
 	// Check for authentication errors
 	if strings.Contains(errStr, "authentication failed") ||
 		strings.Contains(errStr, "unauthorized") ||
 		strings.Contains(errStr, "invalid credentials") {
-		return fmt.Errorf("%s: authentication failed - please check your API key or credentials. Original error: %w", operation, err)
+		return fmt.Errorf("%s: %s: authentication failed - please check your API key or credentials. Original error: %w", vdbType, operation, err)
 	}
 
-	// Default: return original error
-	return fmt.Errorf("%s: %w", operation, err)
+	// Default: include VDB type in error
+	return fmt.Errorf("%s: %s: %w", vdbType, operation, err)
+}
+
+// createContextWithTimeout creates a context with operation-specific timeout
+func (s *Server) createContextWithTimeout(ctx context.Context, opType vectordb.OperationType) (context.Context, context.CancelFunc) {
+	// Get database config to determine if cloud or local
+	dbConfig, err := s.config.GetDefaultDatabase()
+	if err != nil {
+		// Fallback to default timeout
+		return context.WithTimeout(ctx, 30*time.Second)
+	}
+
+	// Determine if cloud deployment (heuristic based on type)
+	isCloud := strings.Contains(string(dbConfig.Type), "cloud") ||
+		dbConfig.Type == "supabase" ||
+		dbConfig.Type == "mongodb" ||
+		dbConfig.Type == "pinecone"
+
+	// Get timeout for this operation type
+	timeout := vectordb.GetTimeoutForOperation(opType, isCloud, dbConfig.Timeout)
+
+	return context.WithTimeout(ctx, timeout)
 }
 
 // handleListCollections handles the list_collections tool
 func (s *Server) handleListCollections(ctx context.Context, args map[string]interface{}) (interface{}, error) {
-	collections, err := s.dbClient.ListCollections(ctx)
+	// Create context with collection operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeCollection)
+	defer cancel()
+
+	collections, err := s.dbClient.ListCollections(timeoutCtx)
 	if err != nil {
-		return nil, enhanceError("failed to list collections", err)
+		return nil, s.enhanceError("failed to list collections", err)
 	}
 
 	// Convert to string array for consistent output
@@ -111,9 +145,13 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 		})
 	}
 
-	err := s.dbClient.CreateCollection(ctx, name, schema)
+	// Create context with collection operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeCollection)
+	defer cancel()
+
+	err := s.dbClient.CreateCollection(timeoutCtx, name, schema)
 	if err != nil {
-		return nil, enhanceError("failed to create collection", err)
+		return nil, s.enhanceError("failed to create collection", err)
 	}
 
 	return map[string]interface{}{
@@ -132,9 +170,13 @@ func (s *Server) handleDeleteCollection(ctx context.Context, args map[string]int
 		return nil, fmt.Errorf("collection name is required")
 	}
 
-	err := s.dbClient.DeleteCollection(ctx, name)
+	// Create context with collection operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeCollection)
+	defer cancel()
+
+	err := s.dbClient.DeleteCollection(timeoutCtx, name)
 	if err != nil {
-		return nil, enhanceError("failed to delete collection", err)
+		return nil, s.enhanceError("failed to delete collection", err)
 	}
 
 	return map[string]interface{}{
@@ -159,9 +201,13 @@ func (s *Server) handleListDocuments(ctx context.Context, args map[string]interf
 		limit = limitInt
 	}
 
-	documents, err := s.dbClient.ListDocuments(ctx, collection, limit, 0)
+	// Create context with query operation timeout (listing is a query)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
+	defer cancel()
+
+	documents, err := s.dbClient.ListDocuments(timeoutCtx, collection, limit, 0)
 	if err != nil {
-		return nil, enhanceError("failed to list documents", err)
+		return nil, s.enhanceError("failed to list documents", err)
 	}
 
 	// Convert documents to a more MCP-friendly format
@@ -213,9 +259,13 @@ func (s *Server) handleCreateDocument(ctx context.Context, args map[string]inter
 		Metadata: metadata,
 	}
 
-	err := s.dbClient.CreateDocument(ctx, collection, doc)
+	// Create context with document operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
+	err := s.dbClient.CreateDocument(timeoutCtx, collection, doc)
 	if err != nil {
-		return nil, enhanceError("failed to create document", err)
+		return nil, s.enhanceError("failed to create document", err)
 	}
 
 	return map[string]interface{}{
@@ -275,10 +325,14 @@ func (s *Server) handleBatchCreateDocuments(ctx context.Context, args map[string
 		documents = append(documents, doc)
 	}
 
+	// Create context with bulk operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeBulk)
+	defer cancel()
+
 	// Create all documents in batch
-	err := s.dbClient.CreateDocuments(ctx, collection, documents)
+	err := s.dbClient.CreateDocuments(timeoutCtx, collection, documents)
 	if err != nil {
-		return nil, enhanceError("failed to create documents in batch", err)
+		return nil, s.enhanceError("failed to create documents in batch", err)
 	}
 
 	return map[string]interface{}{
@@ -300,10 +354,14 @@ func (s *Server) handleGetDocument(ctx context.Context, args map[string]interfac
 		return nil, fmt.Errorf("document ID is required")
 	}
 
+	// Create context with document operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
 	// Get document using vectordb client
-	doc, err := s.dbClient.GetDocument(ctx, collection, documentID)
+	doc, err := s.dbClient.GetDocument(timeoutCtx, collection, documentID)
 	if err != nil {
-		return nil, enhanceError("failed to get document", err)
+		return nil, s.enhanceError("failed to get document", err)
 	}
 
 	return map[string]interface{}{
@@ -328,10 +386,14 @@ func (s *Server) handleDeleteDocument(ctx context.Context, args map[string]inter
 		return nil, fmt.Errorf("document ID is required")
 	}
 
+	// Create context with document operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
 	// Delete document using vectordb client
-	err := s.dbClient.DeleteDocument(ctx, collection, documentID)
+	err := s.dbClient.DeleteDocument(timeoutCtx, collection, documentID)
 	if err != nil {
-		return nil, enhanceError("failed to delete document", err)
+		return nil, s.enhanceError("failed to delete document", err)
 	}
 
 	return map[string]interface{}{
@@ -348,10 +410,14 @@ func (s *Server) handleCountDocuments(ctx context.Context, args map[string]inter
 		return nil, fmt.Errorf("collection name is required")
 	}
 
+	// Create context with query operation timeout (counting is a query)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
+	defer cancel()
+
 	// Count documents using vectordb client
-	count, err := s.dbClient.GetCollectionCount(ctx, collection)
+	count, err := s.dbClient.GetCollectionCount(timeoutCtx, collection)
 	if err != nil {
-		return nil, enhanceError("failed to count documents", err)
+		return nil, s.enhanceError("failed to count documents", err)
 	}
 
 	return map[string]interface{}{
@@ -381,14 +447,18 @@ func (s *Server) handleQueryDocuments(ctx context.Context, args map[string]inter
 		limit = limitInt
 	}
 
+	// Create context with query operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
+	defer cancel()
+
 	// Query documents using vectordb client
 	queryOptions := &vectordb.QueryOptions{
 		TopK: limit,
 	}
 
-	results, err := s.dbClient.SearchSemantic(ctx, collection, query, queryOptions)
+	results, err := s.dbClient.SearchSemantic(timeoutCtx, collection, query, queryOptions)
 	if err != nil {
-		return nil, enhanceError("failed to query documents", err)
+		return nil, s.enhanceError("failed to query documents", err)
 	}
 
 	// Convert results to a more MCP-friendly format
@@ -436,10 +506,14 @@ func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]inter
 		return nil, fmt.Errorf("must provide at least one of: content or metadata")
 	}
 
+	// Create context with document operation timeout
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
 	// Get the existing document first
-	doc, err := s.dbClient.GetDocument(ctx, collection, documentID)
+	doc, err := s.dbClient.GetDocument(timeoutCtx, collection, documentID)
 	if err != nil {
-		return nil, enhanceError("failed to get existing document", err)
+		return nil, s.enhanceError("failed to get existing document", err)
 	}
 
 	// Update the fields
@@ -456,10 +530,10 @@ func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]inter
 		}
 	}
 
-	// Update document using vectordb client
-	err = s.dbClient.UpdateDocument(ctx, collection, doc)
+	// Update document using vectordb client (reuse same timeout context)
+	err = s.dbClient.UpdateDocument(timeoutCtx, collection, doc)
 	if err != nil {
-		return nil, enhanceError("failed to update document", err)
+		return nil, s.enhanceError("failed to update document", err)
 	}
 
 	return map[string]interface{}{
