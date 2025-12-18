@@ -56,6 +56,22 @@ jobs:
         with:
           go-version: '1.24'
 
+      - name: Exclude Chroma from build
+        run: |
+          # Remove chroma package files from weave-cli dependency so they're not compiled
+          CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
+          if [ -d "$CHROMA_PATH" ]; then
+            echo "Found Chroma at: $CHROMA_PATH"
+            ls -la "$CHROMA_PATH/"
+            # Remove all Go files except stub
+            rm -f "$CHROMA_PATH"/client.go "$CHROMA_PATH"/documents.go "$CHROMA_PATH"/factory.go "$CHROMA_PATH"/schema.go "$CHROMA_PATH"/search.go
+            # Keep only stub_unsupported.go for registration
+            echo "Chroma excluded from release build (stub only):"
+            ls -la "$CHROMA_PATH/"
+          else
+            echo "Warning: Chroma path not found, continuing anyway"
+          fi
+
       - name: Build Linux/Windows
         run: |
           mkdir -p dist
@@ -117,6 +133,17 @@ jobs:
         with:
           go-version: '1.24'
 
+      - name: Exclude Chroma from build
+        run: |
+          # Same as Linux - remove chroma files for release builds
+          # Note: Local builds with ./build.sh will still have full Chroma support on macOS
+          CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
+          if [ -d "$CHROMA_PATH" ]; then
+            echo "Found Chroma at: $CHROMA_PATH"
+            rm -f "$CHROMA_PATH"/client.go "$CHROMA_PATH"/documents.go "$CHROMA_PATH"/factory.go "$CHROMA_PATH"/schema.go "$CHROMA_PATH"/search.go
+            echo "Chroma excluded from release build (available in source builds only)"
+          fi
+
       - name: Build macOS
         run: |
           mkdir -p dist
@@ -136,7 +163,7 @@ jobs:
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.GitCommit=$GIT_COMMIT"
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.BuildTime=$BUILD_TIME"
 
-          # Build macOS binaries (CGO enabled for Chroma support)
+          # Build macOS binaries
           echo "Building macOS binaries..."
           GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-darwin-amd64 ./src/main.go
@@ -205,13 +232,15 @@ jobs:
 
           - **Linux AMD64**: `weave-mcp-linux-amd64`
           - **Linux ARM64**: `weave-mcp-linux-arm64`
-          - **macOS AMD64**: `weave-mcp-darwin-amd64` (includes Chroma support)
-          - **macOS ARM64**: `weave-mcp-darwin-arm64` (includes Chroma support)
+          - **macOS AMD64**: `weave-mcp-darwin-amd64`
+          - **macOS ARM64**: `weave-mcp-darwin-arm64`
           - **Windows AMD64**: `weave-mcp-windows-amd64.exe`
 
-          **Note**: Chroma vector database support is only available in macOS binaries due to CGO requirements.
-          Linux and Windows binaries support all other vector databases (Weaviate, Supabase, MongoDB, Milvus,
-          Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch, Mock).
+          **Note**: Chroma vector database is excluded from release binaries due to CGO requirements.
+          Release binaries support 10 vector databases: Weaviate, Supabase, MongoDB, Milvus,
+          Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch, and Mock.
+
+          For Chroma support, build from source on macOS using `./build.sh`.
 
           ### Installation
 
