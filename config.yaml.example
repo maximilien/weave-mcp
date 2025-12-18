@@ -10,7 +10,8 @@ schemas_dir: ./schemas
 # Database Configuration
 databases:
   # Default database type to use
-  # Options: weaviate-cloud, weaviate-local, supabase, mock
+  # Options: weaviate-cloud, weaviate-local, supabase, qdrant, neo4j, pinecone,
+  #          opensearch, elasticsearch, mongodb, milvus, chroma, mock
   default: ${VECTOR_DB_TYPE:-weaviate-cloud}
   
   # Available vector databases
@@ -130,6 +131,104 @@ databases:
           type: image
           description: Chroma image collection
 
+    # Qdrant Vector Database (Open Source/Cloud)
+    # Requires: QDRANT_URL, OPENAI_API_KEY
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: qdrant
+      type: qdrant
+      url: ${QDRANT_URL}                      # Qdrant server URL (http://localhost:6333 or cloud)
+      api_key: ${QDRANT_API_KEY}              # Optional: Qdrant Cloud API key
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${QDRANT_COLLECTION:-WeaveDocs}
+          type: text
+          description: Qdrant text collection
+        - name: ${QDRANT_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Qdrant image collection
+
+    # Neo4j Vector Database (Graph Database with Vector Search)
+    # Requires: NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD, OPENAI_API_KEY
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: neo4j
+      type: neo4j
+      url: ${NEO4J_URI}                       # Neo4j connection URI (bolt://localhost:7687 or neo4j+s://...)
+      api_key: ${NEO4J_USERNAME}:${NEO4J_PASSWORD}  # Username:Password format
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${NEO4J_COLLECTION:-WeaveDocs}
+          type: text
+          description: Neo4j text collection
+        - name: ${NEO4J_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Neo4j image collection
+
+    # Pinecone Vector Database (Managed Cloud Service)
+    # Requires: PINECONE_API_KEY, PINECONE_ENVIRONMENT, OPENAI_API_KEY
+    # Note: Cloud-only service, no local deployment
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: pinecone
+      type: pinecone
+      api_key: ${PINECONE_API_KEY}            # Pinecone API key
+      database_url: ${PINECONE_ENVIRONMENT}   # Pinecone environment (e.g., us-east1-gcp)
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${PINECONE_COLLECTION:-WeaveDocs}
+          type: text
+          description: Pinecone text collection
+        - name: ${PINECONE_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Pinecone image collection
+
+    # OpenSearch Vector Database (Open Source/AWS Managed) - BETA
+    # Requires: OPENSEARCH_URL, OPENAI_API_KEY
+    # Note: Beta status in weave-cli v0.8.2, requires 2GB+ RAM
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: opensearch
+      type: opensearch
+      url: ${OPENSEARCH_URL}                  # OpenSearch URL (http://localhost:9200 or AWS endpoint)
+      api_key: ${OPENSEARCH_USERNAME}:${OPENSEARCH_PASSWORD}  # Username:Password format
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${OPENSEARCH_COLLECTION:-WeaveDocs}
+          type: text
+          description: OpenSearch text collection
+        - name: ${OPENSEARCH_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: OpenSearch image collection
+
+    # Elasticsearch Vector Database (Elastic Cloud/Self-Hosted) - BETA
+    # Requires: ELASTICSEARCH_URL, ELASTICSEARCH_API_KEY, OPENAI_API_KEY
+    # Note: Beta status in weave-cli v0.8.2, requires 2GB+ RAM
+    # Embedding Models: Uses OpenAI client for embedding generation
+    #   - text-embedding-3-small (default, 1536 dimensions)
+    #   - text-embedding-3-large (3072 dimensions)
+    #   - text-embedding-ada-002 (1536 dimensions)
+    - name: elasticsearch
+      type: elasticsearch
+      url: ${ELASTICSEARCH_URL}               # Elasticsearch URL (http://localhost:9200 or cloud)
+      api_key: ${ELASTICSEARCH_API_KEY}       # API key or username:password
+      openai_api_key: ${OPENAI_API_KEY}       # Required for embeddings
+      collections:
+        - name: ${ELASTICSEARCH_COLLECTION:-WeaveDocs}
+          type: text
+          description: Elasticsearch text collection
+        - name: ${ELASTICSEARCH_COLLECTION_IMAGES:-WeaveImages}
+          type: image
+          description: Elasticsearch image collection
+
     # Mock Database (For Testing)
     # No external dependencies required
     - name: mock
@@ -214,6 +313,7 @@ databases:
 
 # Environment Variables Reference:
 # VECTOR_DB_TYPE: Database type (weaviate-cloud, weaviate-local, supabase,
+#                 qdrant, neo4j, pinecone, opensearch, elasticsearch,
 #                 mongodb, milvus, chroma, mock)
 #
 # Weaviate Configuration:
@@ -248,6 +348,38 @@ databases:
 # CHROMA_API_KEY: Optional Chroma Cloud API key
 # CHROMA_COLLECTION: Main text collection name
 # CHROMA_COLLECTION_IMAGES: Image collection name
+#
+# Qdrant Configuration:
+# QDRANT_URL: Qdrant server URL (http://localhost:6333 or cloud endpoint)
+# QDRANT_API_KEY: Optional Qdrant Cloud API key
+# QDRANT_COLLECTION: Main text collection name
+# QDRANT_COLLECTION_IMAGES: Image collection name
+#
+# Neo4j Configuration:
+# NEO4J_URI: Neo4j connection URI (bolt://localhost:7687 or neo4j+s://...)
+# NEO4J_USERNAME: Neo4j username
+# NEO4J_PASSWORD: Neo4j password
+# NEO4J_COLLECTION: Main text collection name
+# NEO4J_COLLECTION_IMAGES: Image collection name
+#
+# Pinecone Configuration:
+# PINECONE_API_KEY: Pinecone API key
+# PINECONE_ENVIRONMENT: Pinecone environment (e.g., us-east1-gcp)
+# PINECONE_COLLECTION: Main text collection name
+# PINECONE_COLLECTION_IMAGES: Image collection name
+#
+# OpenSearch Configuration (Beta):
+# OPENSEARCH_URL: OpenSearch URL (http://localhost:9200 or AWS endpoint)
+# OPENSEARCH_USERNAME: OpenSearch username
+# OPENSEARCH_PASSWORD: OpenSearch password
+# OPENSEARCH_COLLECTION: Main text collection name
+# OPENSEARCH_COLLECTION_IMAGES: Image collection name
+#
+# Elasticsearch Configuration (Beta):
+# ELASTICSEARCH_URL: Elasticsearch URL (http://localhost:9200 or cloud)
+# ELASTICSEARCH_API_KEY: Elasticsearch API key or username:password
+# ELASTICSEARCH_COLLECTION: Main text collection name
+# ELASTICSEARCH_COLLECTION_IMAGES: Image collection name
 #
 # Embedding Configuration (Required for all vector databases except mock):
 # OPENAI_API_KEY: OpenAI API key for embedding generation
