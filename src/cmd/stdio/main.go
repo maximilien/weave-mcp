@@ -19,7 +19,15 @@ import (
 	"go.uber.org/zap"
 
 	// Import vectordb implementations to register their factories
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/chroma"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/elasticsearch"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/milvus"
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/mock"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/mongodb"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/neo4j"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/opensearch"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/pinecone"
+	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/qdrant"
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/supabase"
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/weaviate"
 )
