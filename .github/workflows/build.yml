@@ -39,6 +39,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Download dependencies
+        if: runner.os != 'Windows'
         run: go mod download
 
       - name: Build (Unix)
@@ -101,6 +102,14 @@ jobs:
           # Windows ARM64 is not commonly used
           - goos: windows
             goarch: arm64
+          # Linux AMD64 built natively, skip cross-compile
+          - goos: linux
+            goarch: amd64
+          # Darwin cross-compile from Linux fails (Chroma CGO deps)
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
 
     steps:
       - name: Checkout code
@@ -120,6 +129,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Download dependencies
+        if: matrix.goos != 'windows'
         run: go mod download
 
       - name: Cross-compile HTTP server for ${{ matrix.goos }}/${{ matrix.goarch }}
