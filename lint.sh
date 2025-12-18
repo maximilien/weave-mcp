@@ -162,12 +162,12 @@ else
     echo "ℹ️  No YAML files found to lint"
 fi
 
-# Markdown linting (excluding docs directory with extended formats and MCP Inspector)
+# Markdown linting (excluding docs directory with extended formats, MCP Inspector, and NEXT_STEPS.md)
 echo "📝 Checking Markdown files..."
-if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" | grep -q .; then
+if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -not -path "./NEXT_STEPS.md" | grep -q .; then
     if command_exists markdownlint; then
         # Run markdownlint only on files not in excluded directories
-        if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -exec markdownlint {} +; then
+        if find . -name "*.md" -not -path "./src/vendor/*" -not -path "./node_modules/*" -not -path "./docs/*" -not -path "./tools/mcp-inspector/*" -not -path "./NEXT_STEPS.md" -exec markdownlint {} +; then
             print_success "Markdown linting passed!"
         else
             print_warning "Markdown linting issues found"

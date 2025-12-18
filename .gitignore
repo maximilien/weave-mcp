@@ -38,5 +38,6 @@ logs/*.txt
 *.log
 *.pid
 
-# Working TODOs
+# Working TODOs and project management
 TODOs-weave-cli.md
+NEXT_STEPS.md
