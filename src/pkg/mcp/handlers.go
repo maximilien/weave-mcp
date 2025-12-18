@@ -20,8 +20,8 @@ func (s *Server) enhanceError(operation string, err error) error {
 	}
 
 	// Get database type from config
-	dbConfig, err := s.config.GetDefaultDatabase()
-	if err != nil {
+	dbConfig, configErr := s.config.GetDefaultDatabase()
+	if configErr != nil {
 		// Fallback if we can't get config
 		return fmt.Errorf("%s: %w", operation, err)
 	}

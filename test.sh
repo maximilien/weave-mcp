@@ -120,25 +120,25 @@ esac
 # Function to run unit tests
 run_unit_tests() {
     print_header "Running Unit Tests..."
-    
+
     # Check if Go is installed
     if ! command -v go >/dev/null 2>&1; then
         print_error "Go is not installed. Please install Go 1.21 or later."
         exit 1
     fi
-    
-    # Run basic unit tests
+
+    # Run basic unit tests with coverage
     print_status "Running basic unit tests..."
-    if go test -v -timeout=30s ./tests/... -run="TestConfig|TestMock|TestVectorDB"; then
+    if go test -v -cover -timeout=30s ./tests/... -run="TestConfig|TestMock|TestVectorDB"; then
         print_success "Basic unit tests passed!"
     else
         print_error "Basic unit tests failed!"
         exit 1
     fi
-    
+
     # Run extended unit tests if available
     print_status "Running extended unit tests..."
-    if go test -v -timeout=30s ./tests/... -run="TestConfigExtended|TestMockExtended"; then
+    if go test -v -cover -timeout=30s ./tests/... -run="TestConfigExtended|TestMockExtended"; then
         print_success "Extended unit tests passed!"
     else
         print_warning "Extended unit tests failed or not found"
@@ -236,17 +236,21 @@ run_coverage_tests() {
     # Create coverage directory
     mkdir -p coverage
     
-    # Run tests with coverage (only unit tests and mock integration tests)
+    # Run tests with coverage across all packages
     print_status "Running tests with coverage..."
-    if go test -coverprofile=coverage/coverage.out -covermode=atomic ./tests/... -run="TestConfig|TestMock|TestMCP|TestFastMock|TestFastConfig"; then
+    if go test -coverprofile=coverage/coverage.out -covermode=atomic -coverpkg=./src/pkg/... ./tests/... -run="TestConfig|TestMock|TestMCP|TestFastMock|TestFastConfig"; then
         print_status "Generating coverage report..."
-        
+
         # Generate HTML coverage report
         go tool cover -html=coverage/coverage.out -o coverage/coverage.html
-        
+
         # Generate text coverage report
         go tool cover -func=coverage/coverage.out > coverage/coverage.txt
-        
+
+        # Show coverage summary
+        print_status "Coverage Summary:"
+        go tool cover -func=coverage/coverage.out | grep total | awk '{print "  Total Coverage: " $3}'
+
         print_success "Coverage analysis completed!"
         print_status "Coverage files available in:"
         echo "  - coverage/coverage.html (HTML report)"
