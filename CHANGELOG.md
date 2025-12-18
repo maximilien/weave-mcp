@@ -8,6 +8,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] - 2025-12-18
+
+### Added
+
+- **6 New Vector Database Implementations**: Added support for all remaining
+  vector databases from weave-cli v0.8.2
+  - **Qdrant**: Local and cloud deployments with OpenAI embeddings
+  - **Neo4j**: Local and Aura cloud with graph database vector search
+  - **Pinecone**: Cloud-only managed vector database service
+  - **OpenSearch**: Local and AWS managed deployments (Beta status)
+  - **Elasticsearch**: Local and Elastic Cloud deployments (Beta status)
+  - **Supabase**: Enhanced configuration (already had basic support)
+
+- **Operation-Specific Timeouts**: Smart timeout handling based on operation type
+  - Collection operations: 20s local / 40s cloud (create, delete, list)
+  - Document operations: 15s local / 30s cloud (CRUD operations)
+  - Query operations: 20s local / 40s cloud (search, list, count)
+  - Bulk operations: 120s local / 300s cloud (batch create/delete)
+  - Automatically detects cloud vs local deployment for timeout selection
+
+- **Enhanced Error Messages**: VDB-specific error prefixes for better debugging
+  - Error format: `{VDB_TYPE}: {operation}: {error_details}`
+  - Examples: `weaviate-cloud: failed to list collections: connection refused`
+  - Automatic VDB type detection from configuration
+  - Helpful context for connection, timeout, and authentication errors
+
+- **Test Coverage Reporting**: Added coverage analysis to test suite
+  - New `./test.sh coverage` command generates HTML and text reports
+  - Coverage metrics shown in default test runs with `-cover` flag
+  - Coverage directory with detailed per-function breakdown
+  - Current coverage: 36.6% (config: 53-100%, mock: 75-100%)
+
+### Changed
+
+- **Major Dependency Upgrade**: Updated weave-cli from v0.6.0 to v0.8.2
+  - Adds 6 new VDB implementations (Qdrant, Neo4j, Pinecone, OpenSearch,
+    Elasticsearch, Supabase enhancements)
+  - Comprehensive timeout system with operation-specific durations
+  - Enhanced error messages with VDB-specific prefixes
+  - 100% batch test coverage across all 10 VDBs
+  - Troubleshooting hints in Health() checks
+  - Improved connection handling and Close() methods
+
+- **Binary Size**: Increased to accommodate all 11 VDB clients
+  - HTTP server: 11M → 108M (882% increase)
+  - stdio server: 37M → 108M (192% increase)
+  - Reason: All 11 VDB SDK dependencies now statically linked
+  - New dependencies: chroma-go, go-elasticsearch/v9, milvus-sdk-go/v2,
+    neo4j-go-driver/v5, opensearch-go/v4, go-pinecone, go-client (qdrant)
+
+- **Configuration Files**: Comprehensive updates for 6 new VDBs
+  - `config.yaml.example`: Added detailed configs for all 11 VDBs
+  - `.env.example`: Added environment variables for 6 new databases
+  - Updated VECTOR_DB_TYPE options list (11 total databases)
+  - Added deployment-specific guidance (local vs cloud)
+  - Beta status markers for OpenSearch and Elasticsearch
+
+- **VDB Factory Registration**: All 11 VDB packages now imported at runtime
+  - Updated `src/main.go` (HTTP server) with all VDB imports
+  - Updated `src/cmd/stdio/main.go` (stdio server) with all VDB imports
+  - Pattern follows weave-cli v0.8.2 factory registration approach
+  - Each VDB self-registers via init() functions
+
+- **MCP Handler Improvements**: All 11 handlers updated with modern error handling
+  - `handleListCollections`, `handleCreateCollection`, `handleDeleteCollection`
+  - `handleListDocuments`, `handleCreateDocument`, `handleBatchCreateDocuments`
+  - `handleGetDocument`, `handleDeleteDocument`, `handleCountDocuments`
+  - `handleQueryDocuments`, `handleUpdateDocument`
+  - Each handler now uses operation-specific timeout contexts
+  - All handlers include VDB-specific error prefixes
+
+- **Linting Configuration**: Excluded NEXT_STEPS.md from markdown linting
+  - Added NEXT_STEPS.md to `.gitignore` (working project management file)
+  - Updated `lint.sh` to skip NEXT_STEPS.md in markdownlint checks
+  - Working documents tracked separately from committed documentation
+
+### Fixed
+
+- **Nil Pointer Dereference**: Fixed critical bug in `enhanceError()` method
+  - Variable shadowing bug where error parameter was overwritten
+  - Renamed config error variable from `err` to `configErr`
+  - Prevented nil pointer dereference on `err.Error()` call
+  - Bug caught by integration tests (TestFastMCPIntegration)
+
+### Summary
+
+This is a **major feature release** that brings weave-mcp to full feature parity
+with weave-cli v0.8.2, supporting all 10 production vector databases plus the
+mock testing database.
+
+**Total Vector Databases Supported**: 11
+- Weaviate (Cloud + Local)
+- Supabase (Cloud + Local PostgreSQL)
+- MongoDB (Atlas Cloud)
+- Milvus (Local + Cloud)
+- Chroma (Local + Cloud, macOS CGO)
+- Qdrant (Local + Cloud) - **NEW**
+- Neo4j (Local + Aura Cloud) - **NEW**
+- Pinecone (Cloud only) - **NEW**
+- OpenSearch (Local + Cloud, Beta) - **NEW**
+- Elasticsearch (Local + Cloud, Beta) - **NEW**
+- Mock (Testing)
+
+**Breaking Changes**: None - all changes are backwards compatible
+
+**Migration Guide**: No migration required from v0.3.0
+
 ## [v0.3.0] - 2025-11-27
 
 ### Added

@@ -4,18 +4,19 @@ A Model Context Protocol (MCP) server for vector database operations, built with
 Go and designed to work seamlessly with the
 [weave-cli](https://github.com/maximilien/weave-cli) tool.
 
-> **Recent Updates**: The server now supports both HTTP and stdio transports,
-> includes an MCP Inspector for debugging and testing, comprehensive logging and
-> monitoring capabilities, direct integration with weave-cli for code reuse,
-> a complete CI/CD pipeline with automated testing and releases, document
-> update functionality for flexible document management workflows, and full
-> compatibility with Cursor 2.0's enhanced MCP interface.
+> **Recent Updates (v0.4.0)**: Major upgrade to weave-cli v0.8.2 adds support for
+> 6 new vector databases (Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch,
+> enhanced Supabase), bringing total to 11 databases. New features include
+> operation-specific timeouts (20-300s based on operation type and deployment),
+> VDB-specific error messages for better debugging, enhanced test coverage (36.6%),
+> and comprehensive timeout system for reliable operations across all databases.
 
 ## Features
 
 - **Dual Transport Support**: HTTP and stdio MCP transports
-- **Vector Database Support**: Weaviate, Supabase, MongoDB, Milvus, Chroma,
-  and Mock databases
+- **Vector Database Support**: 11 databases supported - Weaviate, Supabase,
+  MongoDB, Milvus, Chroma, Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch,
+  and Mock
 - **MCP Tools**: Complete set of tools for collection and document management
 - **MCP Inspector**: Web-based debugging and testing interface
 - **Configuration**: YAML + Environment Variables
