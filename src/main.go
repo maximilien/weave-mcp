@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 
 	// Import VDB packages to register factories
-	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/chroma"
+	// Note: Chroma import is in init_chroma_darwin.go (conditional via build tags)
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/elasticsearch"
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/milvus"
 	_ "github.com/maximilien/weave-cli/src/pkg/vectordb/mock"
