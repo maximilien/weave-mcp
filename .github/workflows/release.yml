@@ -56,22 +56,18 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Exclude Chroma from build
+      - name: Prepare Chroma stub for release build
         run: |
-          # Remove chroma package files from weave-cli dependency so they're not compiled
+          # Make Chroma stub compile on all platforms by removing build tag restriction
           CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
           if [ -d "$CHROMA_PATH" ]; then
             echo "Found Chroma at: $CHROMA_PATH"
             # Make module cache writable
             chmod -R u+w "$(go env GOMODCACHE)/github.com/maximilien/weave-cli@v0.8.2"
-            ls -la "$CHROMA_PATH/"
-            # Remove all Go files except stub
-            rm -f "$CHROMA_PATH"/client.go "$CHROMA_PATH"/documents.go "$CHROMA_PATH"/factory.go "$CHROMA_PATH"/schema.go "$CHROMA_PATH"/search.go
-            # Keep only stub_unsupported.go for registration
-            echo "Chroma excluded from release build (stub only):"
-            ls -la "$CHROMA_PATH/"
-          else
-            echo "Warning: Chroma path not found, continuing anyway"
+            # Remove build tag from stub so it compiles on all platforms
+            sed -i '1d' "$CHROMA_PATH/stub_unsupported.go"
+            echo "Modified stub to remove build tag restriction"
+            head -5 "$CHROMA_PATH/stub_unsupported.go"
           fi
 
       - name: Build Linux/Windows
@@ -135,17 +131,18 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Exclude Chroma from build
+      - name: Prepare Chroma stub for release build
         run: |
-          # Same as Linux - remove chroma files for release builds
-          # Note: Local builds with ./build.sh will still have full Chroma support on macOS
+          # Make Chroma stub compile on all platforms by removing build tag restriction
           CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
           if [ -d "$CHROMA_PATH" ]; then
             echo "Found Chroma at: $CHROMA_PATH"
             # Make module cache writable
             chmod -R u+w "$(go env GOMODCACHE)/github.com/maximilien/weave-cli@v0.8.2"
-            rm -f "$CHROMA_PATH"/client.go "$CHROMA_PATH"/documents.go "$CHROMA_PATH"/factory.go "$CHROMA_PATH"/schema.go "$CHROMA_PATH"/search.go
-            echo "Chroma excluded from release build (available in source builds only)"
+            # Remove build tag from stub so it compiles on all platforms
+            sed -i '' '1d' "$CHROMA_PATH/stub_unsupported.go"
+            echo "Modified stub to remove build tag restriction"
+            head -5 "$CHROMA_PATH/stub_unsupported.go"
           fi
 
       - name: Build macOS
@@ -167,15 +164,15 @@ jobs:
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.GitCommit=$GIT_COMMIT"
           LDFLAGS="$LDFLAGS -X $VERSION_PKG.BuildTime=$BUILD_TIME"
 
-          # Build macOS binaries
+          # Build macOS binaries (CGO_ENABLED=0 to avoid Chroma CGO deps)
           echo "Building macOS binaries..."
-          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-darwin-amd64 ./src/main.go
-          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" \
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-darwin-arm64 ./src/main.go
-          GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-stdio-darwin-amd64 ./src/cmd/stdio/main.go
-          GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" \
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" \
             -o dist/weave-mcp-stdio-darwin-arm64 ./src/cmd/stdio/main.go
 
           chmod +x dist/*
