@@ -56,20 +56,6 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Prepare Chroma stub for release build
-        run: |
-          # Make Chroma stub compile on all platforms by removing build tag restriction
-          CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
-          if [ -d "$CHROMA_PATH" ]; then
-            echo "Found Chroma at: $CHROMA_PATH"
-            # Make module cache writable
-            chmod -R u+w "$(go env GOMODCACHE)/github.com/maximilien/weave-cli@v0.8.2"
-            # Remove build tag from stub so it compiles on all platforms
-            sed -i '1d' "$CHROMA_PATH/stub_unsupported.go"
-            echo "Modified stub to remove build tag restriction"
-            head -5 "$CHROMA_PATH/stub_unsupported.go"
-          fi
-
       - name: Build Linux/Windows
         run: |
           mkdir -p dist
@@ -130,20 +116,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: '1.24'
-
-      - name: Prepare Chroma stub for release build
-        run: |
-          # Make Chroma stub compile on all platforms by removing build tag restriction
-          CHROMA_PATH=$(go list -f '{{.Dir}}' -m github.com/maximilien/weave-cli)/src/pkg/vectordb/chroma
-          if [ -d "$CHROMA_PATH" ]; then
-            echo "Found Chroma at: $CHROMA_PATH"
-            # Make module cache writable
-            chmod -R u+w "$(go env GOMODCACHE)/github.com/maximilien/weave-cli@v0.8.2"
-            # Remove build tag from stub so it compiles on all platforms
-            sed -i '' '1d' "$CHROMA_PATH/stub_unsupported.go"
-            echo "Modified stub to remove build tag restriction"
-            head -5 "$CHROMA_PATH/stub_unsupported.go"
-          fi
 
       - name: Build macOS
         run: |
