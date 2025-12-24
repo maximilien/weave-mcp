@@ -99,6 +99,7 @@ with weave-cli v0.8.2, supporting all 10 production vector databases plus the
 mock testing database.
 
 **Total Vector Databases Supported**: 11
+
 - Weaviate (Cloud + Local)
 - Supabase (Cloud + Local PostgreSQL)
 - MongoDB (Atlas Cloud)
