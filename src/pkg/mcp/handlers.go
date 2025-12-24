@@ -4,8 +4,11 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -541,4 +544,127 @@ func (s *Server) handleUpdateDocument(ctx context.Context, args map[string]inter
 		"collection":  collection,
 		"status":      "updated",
 	}, nil
+}
+
+// handleSuggestSchema handles the suggest_schema tool
+func (s *Server) handleSuggestSchema(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	sourcePath, ok := args["source_path"].(string)
+	if !ok {
+		return nil, fmt.Errorf("source_path is required")
+	}
+
+	collectionName, ok := args["collection_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection_name is required")
+	}
+
+	// Optional parameters
+	requirements := ""
+	if req, ok := args["requirements"].(string); ok {
+		requirements = req
+	}
+
+	vdbType := "weaviate"
+	if vdb, ok := args["vdb_type"].(string); ok {
+		vdbType = vdb
+	}
+
+	maxSamples := "50"
+	if max, ok := args["max_samples"].(float64); ok {
+		maxSamples = fmt.Sprintf("%d", int(max))
+	}
+
+	// Build CLI command
+	cmdParts := []string{"weave", "schema", "suggest", sourcePath, "--collection", collectionName, "--vdb", vdbType, "--max-samples", maxSamples, "--output", "json"}
+	if requirements != "" {
+		cmdParts = append(cmdParts, "--requirements", fmt.Sprintf("\"%s\"", requirements))
+	}
+
+	cmd := strings.Join(cmdParts, " ")
+
+	// Create timeout context (60 seconds for AI operations)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 60)
+	defer cancel()
+
+	// Execute command
+	result, err := s.executeCommand(timeoutCtx, cmd)
+	if err != nil {
+		return nil, s.enhanceError("failed to suggest schema", err)
+	}
+
+	return result, nil
+}
+
+// handleSuggestChunking handles the suggest_chunking tool
+func (s *Server) handleSuggestChunking(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	sourcePath, ok := args["source_path"].(string)
+	if !ok {
+		return nil, fmt.Errorf("source_path is required")
+	}
+
+	collectionName, ok := args["collection_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection_name is required")
+	}
+
+	// Optional parameters
+	requirements := ""
+	if req, ok := args["requirements"].(string); ok {
+		requirements = req
+	}
+
+	vdbType := "weaviate"
+	if vdb, ok := args["vdb_type"].(string); ok {
+		vdbType = vdb
+	}
+
+	maxSamples := "50"
+	if max, ok := args["max_samples"].(float64); ok {
+		maxSamples = fmt.Sprintf("%d", int(max))
+	}
+
+	// Build CLI command
+	cmdParts := []string{"weave", "chunking", "suggest", sourcePath, "--collection", collectionName, "--vdb", vdbType, "--max-samples", maxSamples, "--output", "json"}
+	if requirements != "" {
+		cmdParts = append(cmdParts, "--requirements", fmt.Sprintf("\"%s\"", requirements))
+	}
+
+	cmd := strings.Join(cmdParts, " ")
+
+	// Create timeout context (60 seconds for AI operations)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 60)
+	defer cancel()
+
+	// Execute command
+	result, err := s.executeCommand(timeoutCtx, cmd)
+	if err != nil {
+		return nil, s.enhanceError("failed to suggest chunking", err)
+	}
+
+	return result, nil
+}
+
+// executeCommand executes a shell command and returns the result
+func (s *Server) executeCommand(ctx context.Context, cmdStr string) (interface{}, error) {
+	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return nil, fmt.Errorf("command failed: %s - %s", err, stderr.String())
+	}
+
+	// Try to parse JSON output
+	var result interface{}
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		// If not JSON, return raw output
+		return map[string]interface{}{
+			"output": stdout.String(),
+		}, nil
+	}
+
+	return result, nil
 }

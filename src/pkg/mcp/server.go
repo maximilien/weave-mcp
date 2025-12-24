@@ -452,6 +452,77 @@ func (s *Server) registerTools() {
 		},
 		Handler: s.handleQueryDocuments,
 	})
+
+	// AI tools
+	s.registerTool(Tool{
+		Name:        "suggest_schema",
+		Description: "Analyze documents and suggest an optimal collection schema using AI",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"source_path": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to directory or file(s) to analyze",
+				},
+				"collection_name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name for the target collection",
+				},
+				"requirements": map[string]interface{}{
+					"type":        "string",
+					"description": "Optional user requirements for the schema",
+					"default":     "",
+				},
+				"vdb_type": map[string]interface{}{
+					"type":        "string",
+					"description": "Target vector database type",
+					"default":     "weaviate",
+				},
+				"max_samples": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of files to sample",
+					"default":     50,
+				},
+			},
+			"required": []string{"source_path", "collection_name"},
+		},
+		Handler: s.handleSuggestSchema,
+	})
+
+	s.registerTool(Tool{
+		Name:        "suggest_chunking",
+		Description: "Analyze documents and suggest optimal chunking configuration using AI",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"source_path": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to directory or file(s) to analyze",
+				},
+				"collection_name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name for the target collection",
+				},
+				"requirements": map[string]interface{}{
+					"type":        "string",
+					"description": "Optional user requirements for chunking",
+					"default":     "",
+				},
+				"vdb_type": map[string]interface{}{
+					"type":        "string",
+					"description": "Target vector database type",
+					"default":     "weaviate",
+				},
+				"max_samples": map[string]interface{}{
+					"type":        "integer",
+					"description": "Maximum number of files to sample",
+					"default":     50,
+				},
+			},
+			"required": []string{"source_path", "collection_name"},
+		},
+		Handler: s.handleSuggestChunking,
+	})
 }
 
 // registerTool registers a tool with the server
