@@ -59,6 +59,13 @@ func TestMCP(t *testing.T) {
 		assert.Contains(t, server.Tools, "delete_document")
 		assert.Contains(t, server.Tools, "count_documents")
 		assert.Contains(t, server.Tools, "query_documents")
+
+		// Check new tools (Phase 1)
+		assert.Contains(t, server.Tools, "health_check")
+		assert.Contains(t, server.Tools, "count_collections")
+		assert.Contains(t, server.Tools, "show_collection")
+		assert.Contains(t, server.Tools, "list_embedding_models")
+		assert.Contains(t, server.Tools, "show_collection_embeddings")
 	})
 
 	t.Run("Tool Registration", func(t *testing.T) {

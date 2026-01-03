@@ -229,6 +229,70 @@ func (s *MockServer) registerTools() {
 		},
 		Handler: s.handleQueryDocuments,
 	})
+
+	// Health and monitoring tools
+	s.registerTool(Tool{
+		Name:        "health_check",
+		Description: "Check the health and connectivity of the vector database",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleHealthCheck,
+	})
+
+	s.registerTool(Tool{
+		Name:        "count_collections",
+		Description: "Count the total number of collections in the database",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleCountCollections,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_collection",
+		Description: "Show detailed information about a collection including schema, count, and properties",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection to show",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleShowCollection,
+	})
+
+	// Embedding tools
+	s.registerTool(Tool{
+		Name:        "list_embedding_models",
+		Description: "List all available embedding models and their properties",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleListEmbeddingModels,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_collection_embeddings",
+		Description: "Show embedding configuration for a specific collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleShowCollectionEmbeddings,
+	})
 }
 
 // registerTool registers a tool with the mock server
@@ -491,6 +555,132 @@ func (s *MockServer) handleQueryDocuments(ctx context.Context, args map[string]i
 		"count":      len(result),
 		"collection": collection,
 		"query":      query,
+	}, nil
+}
+
+// New tool handlers (Phase 1)
+
+func (s *MockServer) handleHealthCheck(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Mock health check - always return healthy for mock server
+	return map[string]interface{}{
+		"status":   "healthy",
+		"database": "mock",
+		"url":      "mock://localhost",
+	}, nil
+}
+
+func (s *MockServer) handleCountCollections(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collections, err := s.mockDB.ListCollections(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list collections: %w", err)
+	}
+
+	return map[string]interface{}{
+		"count":       len(collections),
+		"collections": collections,
+	}, nil
+}
+
+func (s *MockServer) handleShowCollection(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	name, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Get collection info from mock DB
+	_, err := s.mockDB.GetCollectionInfo(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get collection info: %w", err)
+	}
+
+	count, err := s.mockDB.CountDocuments(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count documents: %w", err)
+	}
+
+	// Return mock schema
+	return map[string]interface{}{
+		"name":  name,
+		"count": count,
+		"schema": map[string]interface{}{
+			"class": name,
+			"properties": []map[string]interface{}{
+				{
+					"name":     "text",
+					"dataType": []string{"text"},
+				},
+				{
+					"name":     "url",
+					"dataType": []string{"string"},
+				},
+			},
+		},
+		"vectorizer": "text2vec-openai",
+		"properties": []map[string]interface{}{
+			{"name": "text", "type": "text"},
+			{"name": "url", "type": "string"},
+		},
+	}, nil
+}
+
+func (s *MockServer) handleListEmbeddingModels(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Return same models as real server
+	models := []map[string]interface{}{
+		{
+			"name":        "text2vec-openai",
+			"type":        "openai",
+			"description": "OpenAI text embedding model (legacy, uses text-embedding-ada-002)",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-3-small",
+			"type":        "openai",
+			"description": "OpenAI's latest small embedding model - faster and cheaper",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-3-large",
+			"type":        "openai",
+			"description": "OpenAI's latest large embedding model - better quality",
+			"dimensions":  3072,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-ada-002",
+			"type":        "openai",
+			"description": "OpenAI's Ada model (legacy)",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+	}
+
+	return map[string]interface{}{
+		"models": models,
+		"count":  len(models),
+	}, nil
+}
+
+func (s *MockServer) handleShowCollectionEmbeddings(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	name, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Verify collection exists
+	_, err := s.mockDB.GetCollectionInfo(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get collection info: %w", err)
+	}
+
+	// Return mock embedding config
+	return map[string]interface{}{
+		"collection": name,
+		"vectorizer": "text-embedding-3-small",
+		"model":      "text-embedding-3-small",
+		"dimensions": 1536,
+		"provider":   "openai",
 	}, nil
 }
 
