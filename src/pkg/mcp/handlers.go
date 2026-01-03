@@ -668,3 +668,161 @@ func (s *Server) executeCommand(ctx context.Context, cmdStr string) (interface{}
 
 	return result, nil
 }
+
+// handleHealthCheck checks the health of the vector database
+func (s *Server) handleHealthCheck(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Create timeout context (10 seconds for health check)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 10)
+	defer cancel()
+
+	// Get database config
+	dbConfig, err := s.config.GetDefaultDatabase()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database config: %w", err)
+	}
+
+	// Check database health
+	err = s.dbClient.Health(timeoutCtx)
+	if err != nil {
+		return map[string]interface{}{
+			"status":   "unhealthy",
+			"database": string(dbConfig.Type),
+			"error":    err.Error(),
+		}, nil
+	}
+
+	return map[string]interface{}{
+		"status":   "healthy",
+		"database": string(dbConfig.Type),
+		"url":      dbConfig.URL,
+	}, nil
+}
+
+// handleCountCollections counts the total number of collections
+func (s *Server) handleCountCollections(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Create timeout context (20 seconds for collection operation)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 20)
+	defer cancel()
+
+	// List all collections
+	collections, err := s.dbClient.ListCollections(timeoutCtx)
+	if err != nil {
+		return nil, s.enhanceError("failed to list collections", err)
+	}
+
+	// Extract collection names
+	names := make([]string, len(collections))
+	for i, col := range collections {
+		names[i] = col.Name
+	}
+
+	return map[string]interface{}{
+		"count":       len(collections),
+		"collections": names,
+	}, nil
+}
+
+// handleShowCollection shows detailed information about a collection
+func (s *Server) handleShowCollection(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Create timeout context (20 seconds for collection operation)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 20)
+	defer cancel()
+
+	// Get collection schema
+	schema, err := s.dbClient.GetSchema(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to get collection schema", err)
+	}
+
+	// Get collection count
+	count, err := s.dbClient.GetCollectionCount(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to get collection count", err)
+	}
+
+	return map[string]interface{}{
+		"name":       collectionName,
+		"schema":     schema,
+		"count":      count,
+		"vectorizer": schema.Vectorizer,
+		"properties": schema.Properties,
+	}, nil
+}
+
+// handleListEmbeddingModels lists all available embedding models
+func (s *Server) handleListEmbeddingModels(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Return list of supported embedding models
+	// These are the models supported across all vector databases
+	models := []map[string]interface{}{
+		{
+			"name":        "text2vec-openai",
+			"type":        "openai",
+			"description": "OpenAI text embedding model (legacy, uses text-embedding-ada-002)",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-3-small",
+			"type":        "openai",
+			"description": "OpenAI's latest small embedding model - faster and cheaper",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-3-large",
+			"type":        "openai",
+			"description": "OpenAI's latest large embedding model - better quality",
+			"dimensions":  3072,
+			"provider":    "openai",
+		},
+		{
+			"name":        "text-embedding-ada-002",
+			"type":        "openai",
+			"description": "OpenAI's Ada model (legacy)",
+			"dimensions":  1536,
+			"provider":    "openai",
+		},
+	}
+
+	return map[string]interface{}{
+		"models": models,
+		"count":  len(models),
+	}, nil
+}
+
+// handleShowCollectionEmbeddings shows embedding configuration for a collection
+func (s *Server) handleShowCollectionEmbeddings(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Create timeout context (20 seconds for collection operation)
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 20)
+	defer cancel()
+
+	// Get collection schema which contains vectorizer info
+	schema, err := s.dbClient.GetSchema(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to get collection schema", err)
+	}
+
+	// Determine dimensions based on vectorizer
+	dimensions := 1536 // default for most OpenAI models
+	if schema.Vectorizer == "text-embedding-3-large" {
+		dimensions = 3072
+	}
+
+	return map[string]interface{}{
+		"collection": collectionName,
+		"vectorizer": schema.Vectorizer,
+		"model":      schema.Vectorizer,
+		"dimensions": dimensions,
+		"provider":   "openai",
+	}, nil
+}

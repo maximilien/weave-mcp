@@ -523,6 +523,70 @@ func (s *Server) registerTools() {
 		},
 		Handler: s.handleSuggestChunking,
 	})
+
+	// Health and monitoring tools
+	s.registerTool(Tool{
+		Name:        "health_check",
+		Description: "Check the health and connectivity of the vector database",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleHealthCheck,
+	})
+
+	s.registerTool(Tool{
+		Name:        "count_collections",
+		Description: "Count the total number of collections in the database",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleCountCollections,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_collection",
+		Description: "Show detailed information about a collection including schema, count, and properties",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection to show",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleShowCollection,
+	})
+
+	// Embedding tools
+	s.registerTool(Tool{
+		Name:        "list_embedding_models",
+		Description: "List all available embedding models and their properties",
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
+		Handler: s.handleListEmbeddingModels,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_collection_embeddings",
+		Description: "Show embedding configuration for a specific collection",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleShowCollectionEmbeddings,
+	})
 }
 
 // registerTool registers a tool with the server
