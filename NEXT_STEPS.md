@@ -1,202 +1,428 @@
-# v0.4.0 Release - COMPLETED ✅
+# Next Steps for weave-mcp
 
-## Status: SUCCESS! 🎉
+**Last Updated:** 2026-01-04
+**Current Version:** v0.8.2
+**Status:** ✅ Shipped and production-ready
 
-**Release v0.4.0 is LIVE:** https://github.com/maximilien/weave-mcp/releases/tag/v0.4.0
+---
 
-All CI workflows passed:
-- ✅ Build (all platforms)
-- ✅ Test
-- ✅ Lint
-- ✅ Release (10 binaries created)
-- ⚠️ Security (known Weaviate vulnerability - not blocking)
+## ✅ Completed (v0.8.2 - Released Today!)
 
-## Solution Implemented: Option 2 - Build Tags
+- [x] Issue #5 audit - Complete analysis
+- [x] Issue #6 - Version alignment with weave-cli
+- [x] Phase 1 - 5 new MCP tools (health_check, count_collections, show_collection, list_embedding_models, show_collection_embeddings)
+- [x] Phase 2 - Comprehensive documentation (MCP_TOOLS.md, EXAMPLES.md)
+- [x] Phase 3 - Unit tests (100% coverage for new handlers)
+- [x] Release v0.8.2 - Aligned with weave-cli v0.8.2
 
-Successfully implemented conditional Chroma support using Go build tags:
+**Current State:**
+- 18 MCP tools (45% weave-cli coverage)
+- 60% documentation coverage
+- 9.8% test coverage (new handlers 100%)
+- Production-ready ✨
 
-### Files Created:
-1. `src/init_chroma_darwin.go` - Imports Chroma with `//go:build darwin && cgo`
-2. `src/init_chroma_stub.go` - Stub with `//go:build !darwin || !cgo`
-3. `src/cmd/stdio/init_chroma_darwin.go` - Same for stdio
-4. `src/cmd/stdio/init_chroma_stub.go` - Same for stdio
+---
 
-### Files Modified:
-1. `src/main.go` - Removed direct Chroma import (now in init_chroma_darwin.go)
-2. `src/cmd/stdio/main.go` - Removed direct Chroma import
-3. `.github/workflows/release.yml` - Removed Chroma stub preparation steps
+## 🐛 Open Issues
 
-### How It Works:
-- **Release builds** (CGO_ENABLED=0): Use stub, exclude Chroma
-- **Local macOS builds** (CGO enabled): Include full Chroma support
-- **Local Linux/Windows builds**: Use stub automatically
+### Issue #4: Update to latest weave-cli
+**Status:** ✅ DONE (Can be closed)
+**Completed:** v0.8.2 now aligned with weave-cli v0.8.2
+**Action:** Close this issue tomorrow
 
-## Release Details
+### Issue #1: Feature - Support HTTPS
+**Status:** OPEN
+**Priority:** Medium
+**Effort:** 2-4 hours
+**Description:** Add HTTPS support to HTTP MCP server
 
-**Binaries (10 total):**
-- Linux: amd64, arm64 (HTTP + stdio)
-- macOS: amd64, arm64 (HTTP + stdio)
-- Windows: amd64 (HTTP + stdio)
-- Plus checksums.txt
+**Implementation Plan:**
+1. Add TLS configuration to config.yaml
+2. Add cert/key file paths to config
+3. Update HTTP server to support TLS
+4. Add --tls flag to enable HTTPS
+5. Document HTTPS setup in README
+6. Add example certs for development
 
-**Supported VDBs in Release:**
-1. Weaviate (Cloud + Local)
-2. Supabase
-3. MongoDB
-4. Milvus
-5. Qdrant
-6. Neo4j
-7. Pinecone
-8. OpenSearch
-9. Elasticsearch
-10. Mock
+**Benefits:**
+- Secure MCP server for production use
+- Required for some enterprise deployments
+- Better security for API key transmission
 
-**Chroma Support:**
-- ✅ Available in local macOS source builds with `./build.sh`
-- ❌ Excluded from release binaries (CGO requirement)
-- Users needing Chroma should build from source or use weave-cli
+**Could combine with:** Phase 4 or do standalone
 
-## Optional Next Steps (Not Blocking)
+---
 
-### 1. Documentation Polish (Optional)
+## 🎯 Tomorrow's Priority Options
 
-Consider clarifying Chroma support in docs:
+### Option A: Phase 4 - Medium-Priority Tools (⭐ Recommended)
 
-**README.md:**
-- Current: "11 databases supported"
-- Could update to: "10 databases in release binaries (11 with Chroma when building from source on macOS)"
-- Add note about build tags in development section
+**Goal:** Add 5 useful operation tools → 23 total tools, 60% coverage
 
-**Files to potentially update:**
-- README.md line 7 (Recent Updates section)
-- README.md line 17-19 (Features section)
-- CHANGELOG.md v0.4.0 summary
+**Time:** 2-3 hours
 
-**Not urgent** - current docs are accurate (Chroma IS supported, just not in release binaries)
+**Tasks:**
 
-### 2. Address Security Vulnerability (Optional)
+1. **`get_collection_stats`** (1 hour)
+   - Handler: `handleGetCollectionStats`
+   - Returns: document count, size estimate, last updated
+   - Most requested tool
+   - Tests: 3-4 scenarios
 
-Security workflow failing due to known Weaviate vulnerability:
-```
-GO-2025-4237: Weaviate OSS has a Path Traversal Vulnerability via Backup ZipSlip
-Module: github.com/weaviate/weaviate@v1.23.0-rc.0
-Fixed in: github.com/weaviate/weaviate@v1.30.20
-```
+2. **`delete_all_documents`** (45 mins)
+   - Handler: `handleDeleteAllDocuments`
+   - Parameters: collection_name (optional - all if not provided)
+   - Returns: deleted count
+   - Useful for testing/cleanup
+   - Tests: 2-3 scenarios
 
-**Options:**
-1. Wait for weave-cli to update Weaviate dependency
-2. Override in weave-mcp's go.mod (not recommended - could break compatibility)
-3. Document as known issue
-4. Ignore (vulnerability is in backup feature, not core functionality)
+3. **`show_document_by_name`** (45 mins)
+   - Handler: `handleShowDocumentByName`
+   - Parameters: collection_name, filename
+   - More user-friendly than ID-based lookup
+   - Tests: 3-4 scenarios
 
-**Recommendation:** Wait for weave-cli upstream fix
+4. **`delete_document_by_name`** (30 mins)
+   - Handler: `handleDeleteDocumentByName`
+   - Parameters: collection_name, filename
+   - Returns: success/failure
+   - Tests: 2-3 scenarios
 
-### 3. Test Chroma Locally (Optional)
+5. **`execute_query`** (1 hour)
+   - Handler: `handleExecuteQuery`
+   - Parameters: query (natural language), collection_name (optional)
+   - Natural language search capability
+   - Tests: 3-4 scenarios
 
-Verify Chroma works when building from source:
+**Deliverables:**
+- 5 new handlers in handlers.go
+- 5 tool registrations in server.go
+- ~150 lines of tests in handlers_test.go
+- Update mock_server.go with mock handlers
+- Update MCP_TOOLS.md with new tools
+- Update README.md tool counts
+- Commit and release v0.8.3
+
+---
+
+### Option B: Issue #1 - Add HTTPS Support (Good Alternative)
+
+**Goal:** Enable secure MCP server for production
+
+**Time:** 2-4 hours
+
+**Tasks:**
+
+1. **Add TLS configuration** (30 mins)
+   - Update config.yaml.example
+   - Add TLS cert/key paths
+   - Add enable_tls flag
+
+2. **Implement TLS in HTTP server** (1 hour)
+   - Update src/main.go to support TLS
+   - Add cert loading logic
+   - Add --tls flag
+   - Fallback to HTTP if no certs
+
+3. **Testing** (1 hour)
+   - Generate self-signed certs for testing
+   - Test HTTPS mode
+   - Test HTTP fallback
+   - Update tests
+
+4. **Documentation** (30 mins)
+   - Document HTTPS setup in README
+   - Add cert generation instructions
+   - Update MCP Inspector config example
+
+**Deliverables:**
+- TLS support in HTTP server
+- Configuration examples
+- Documentation
+- Close issue #1
+- Release v0.8.3
+
+---
+
+### Option C: Phase 5 - Developer Documentation
+
+**Goal:** Enable contributors → 80% documentation coverage
+
+**Time:** 2-3 hours
+
+**Tasks:**
+
+1. **`docs/ARCHITECTURE.md`** (1 hour)
+   - System architecture diagram
+   - MCP server implementation overview
+   - Handler flow and lifecycle
+   - Database client abstraction
+   - Error handling strategy
+   - Timeout management
+
+2. **`docs/DEVELOPMENT.md`** (1 hour)
+   - Development environment setup
+   - Building from source
+   - Running tests (unit, integration, coverage)
+   - Adding new MCP tools (step-by-step guide)
+   - Adding new VDB support
+   - CI/CD workflow explanation
+   - Release process
+
+3. **`docs/TESTING.md`** (30 mins)
+   - Test structure (unit vs integration)
+   - Running specific test suites
+   - Coverage requirements and goals
+   - Mock database usage
+   - Writing integration tests
+   - CI test execution
+
+**Deliverables:**
+- 3 comprehensive developer docs
+- Update README.md with links
+- Enable community contributions
+- Commit and push
+
+---
+
+### Option D: Quick Wins (1 hour)
+
+**Pick 1-2 easy tasks:**
+
+1. **Close issue #4** (5 mins)
+   - Already done, just close it
+   - Add comment about v0.8.2
+
+2. **Add `get_collection_stats`** (1 hour)
+   - Most requested single tool
+   - Simple implementation
+   - High value
+
+3. **Create `docs/FAQ.md`** (45 mins)
+   - Answer common questions
+   - VDB selection guide
+   - Embedding model comparison
+   - Performance tips
+
+4. **Update existing handler tests** (1 hour)
+   - Add tests for original 13 tools
+   - Increase overall coverage
+   - Establish consistent pattern
+
+---
+
+## 💡 Recommended Plan for Tomorrow
+
+**Start with:** Option A (Phase 4) - Best ROI!
+
+**Why:**
+- ✅ Quick (2-3 hours)
+- ✅ High user value (5 useful tools)
+- ✅ Hits 60% coverage milestone
+- ✅ Natural continuation of today's work
+- ✅ Can do Issue #1 (HTTPS) after if time
+
+**Order:**
+1. `get_collection_stats` - Most requested
+2. `delete_all_documents` - Testing utility
+3. Document-by-name tools - UX improvement
+4. `execute_query` - Advanced feature
+5. Update docs, test, commit
+6. **Then** tackle Issue #1 (HTTPS) if time remains
+
+---
+
+## 📋 Backlog (Future)
+
+### Phase 6: Low-Priority Tools (~5-7 days)
+
+**Configuration Tools (9 tools):**
+- config_create, config_update, config_sync
+- config_show, config_list
+- config_list_schemas, config_show_schema
+- config_update_weave_mcp
+
+**Schema Management (3 tools):**
+- list_schemas
+- show_schema
+- delete_collection_schema
+
+**Pipeline (1 tool):**
+- pipeline_ingest (batch directory ingestion)
+
+### Advanced Testing (~3-4 days)
+
+- Integration tests for all 18 tools
+- E2E MCP protocol compliance tests
+- Performance/load tests
+- Cross-VDB compatibility tests (11 databases)
+
+### Documentation Polish (~2-3 days)
+
+- FAQ.md (or include in Phase 5)
+- Migration guides (v0.4→v0.8, v0.8→v0.9)
+- Auto-generated API reference
+- Documentation CI checks (link checking, spell check)
+
+### Other Features
+
+- WebSocket support for MCP
+- Rate limiting
+- Authentication/authorization
+- Metrics/monitoring endpoints
+- Admin API
+
+---
+
+## 📊 Progress Tracking
+
+| Metric | v0.4.0 | v0.8.2 (Today) | After Phase 4 | After Issue #1 | Goal |
+|--------|--------|----------------|---------------|----------------|------|
+| **MCP Tools** | 13 | 18 | 23 | 23 | 30+ |
+| **weave-cli Coverage** | 32% | 45% | 60% | 60% | 80% |
+| **Documentation** | 25% | 60% | 65% | 70% | 80% |
+| **Test Coverage** | 36.6% | 9.8% | 15%+ | 15%+ | 60%+ |
+| **Features** | Basic | +Health | +Stats | +HTTPS | Complete |
+
+---
+
+## 🚀 Quick Start Tomorrow
 
 ```bash
-# On macOS with CGO
-./build.sh
-VECTOR_DB_TYPE=chroma-local ./bin/weave-mcp
+# Pull latest (v0.8.2 tag)
+git pull
+git pull --tags
 
-# Should include Chroma in factory registration
-# Should connect to local Chroma instance
+# Verify version
+git describe --tags
+# Should show: v0.8.2
+
+# Check build
+./build.sh
+cat bin/build-info.txt | head -5
+
+# Verify tests pass
+./test.sh
+
+# Ready to code! Start with Phase 4
 ```
 
-## What We Accomplished
+**First task:** Implement `get_collection_stats` handler
 
-### Phase 1: Dependency Upgrade ✅
-- Upgraded weave-cli from v0.6.0 to v0.8.2
-- Added 6 new VDB configurations (Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch, Supabase)
-- Updated go.mod and ran go mod tidy
+---
 
-### Phase 2: VDB Integration ✅
-- Registered all 11 VDB factories in main.go and stdio/main.go
-- Added blank imports for all VDB packages
-- Updated config.yaml.example and .env.example
+## 📝 Development Notes
 
-### Phase 3: Error Handling ✅
-- Enhanced error messages with VDB-specific prefixes
-- Added operation-specific timeouts (20-300s based on operation and deployment)
-- Updated all 11 MCP handlers
-- Fixed nil pointer dereference bug in enhanceError()
+### Patterns to Follow
 
-### Phase 4: CI Fixes ✅
-- Fixed Build workflow (exclude darwin from cross-compile)
-- Kept Windows native builds
-- Implemented build tags for conditional Chroma support
-- Removed Chroma stub preparation from release workflow
+**Adding a new MCP tool:**
 
-### Phase 5: Documentation & Release ✅
-- Updated CHANGELOG.md with comprehensive v0.4.0 notes
-- Updated README.md with new VDB count and features
-- Created GitHub Release v0.4.0 with all binaries
-- Tagged and pushed v0.4.0
+1. **Handler** (handlers.go):
+   ```go
+   func (s *Server) handleNewTool(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+       // 1. Extract and validate parameters
+       // 2. Create timeout context
+       // 3. Call VDB client method
+       // 4. Return formatted response
+       // 5. Use s.enhanceError() for errors
+   }
+   ```
 
-### Phase 6: Coverage Reporting ✅
-- Added coverage reporting to test.sh
-- Current coverage: 36.6% overall
-- Coverage reports in coverage/ directory
+2. **Registration** (server.go):
+   ```go
+   s.registerTool(Tool{
+       Name:        "new_tool",
+       Description: "Tool description",
+       InputSchema: map[string]interface{}{
+           "type": "object",
+           "properties": map[string]interface{}{
+               "param": map[string]interface{}{
+                   "type": "string",
+                   "description": "Parameter description",
+               },
+           },
+           "required": []string{"param"},
+       },
+       Handler: s.handleNewTool,
+   })
+   ```
 
-## Lessons Learned
+3. **Tests** (handlers_test.go):
+   ```go
+   func TestHandleNewTool(t *testing.T) {
+       t.Run("success", func(t *testing.T) { /* ... */ })
+       t.Run("error - missing param", func(t *testing.T) { /* ... */ })
+       t.Run("error - database failure", func(t *testing.T) { /* ... */ })
+   }
+   ```
 
-### What Worked:
-1. ✅ **Build Tags** - Clean, maintainable solution for platform-specific code
-2. ✅ **Incremental Approach** - Fix one workflow at a time
-3. ✅ **Following Patterns** - Learned from weave-cli's approach
-4. ✅ **Local Testing** - Caught issues before CI
+4. **Mock** (mock_server.go):
+   - Add tool registration
+   - Add mock handler implementation
 
-### What Didn't Work:
-1. ❌ **Deleting Dependency Files** - Go module cache is read-only
-2. ❌ **Modifying Dependency Files** - Import resolution doesn't respect file deletion
-3. ❌ **sed on Dependencies** - Build tag removal didn't help
-4. ❌ **Cross-compiling with CGO** - Fundamental limitation
+5. **Documentation** (MCP_TOOLS.md):
+   - Add tool to quick reference table
+   - Add detailed section with params, response, examples
 
-### Key Insights:
-- CGO dependencies are incompatible with cross-compilation
-- Build tags are the Go-idiomatic solution for platform-specific code
-- Release binaries should prioritize portability over feature completeness
-- Local development can maintain full feature set
+### Commit Message Format
 
-## Files Changed Summary
+```
+<type>: <short description>
 
-**Total: 7 files modified, 4 files created**
+<detailed description>
 
-**Modified:**
-1. src/main.go - Removed Chroma import
-2. src/cmd/stdio/main.go - Removed Chroma import
-3. .github/workflows/build.yml - Exclude darwin from cross-compile
-4. .github/workflows/release.yml - Removed Chroma stub prep
+- Bullet points for changes
+- Link to issues if applicable
 
-**Created:**
-1. src/init_chroma_darwin.go - Conditional Chroma import
-2. src/init_chroma_stub.go - Stub for non-darwin/non-cgo
-3. src/cmd/stdio/init_chroma_darwin.go - Same for stdio
-4. src/cmd/stdio/init_chroma_stub.go - Same for stdio
+Related to #<issue_number>
+Closes #<issue_number>
+```
 
-## Success Metrics
+Types: feat, fix, docs, test, chore, refactor
 
-- ✅ Build successful on all platforms (Ubuntu, macOS, Windows)
-- ✅ Release binaries created (10 total)
-- ✅ Test coverage: 36.6%
-- ✅ All tests passing
-- ✅ Linting clean
-- ✅ GitHub Release published
-- ✅ 10 VDBs supported in release
-- ✅ Chroma available in local macOS builds
+---
 
-## Conclusion
+## 🎯 Success Criteria
 
-**v0.4.0 is a major success!** We:
-- Added 5 new production VDBs (6 if counting Chroma locally)
-- Implemented operation-specific timeouts
-- Enhanced error messages
-- Fixed critical bugs
-- Improved test coverage
-- Maintained backward compatibility
-- Zero breaking changes
+**After Phase 4:**
+- [ ] 23 MCP tools implemented
+- [ ] 60% weave-cli coverage achieved
+- [ ] All new tools have 100% test coverage
+- [ ] MCP_TOOLS.md updated
+- [ ] README.md updated
+- [ ] All tests passing
+- [ ] v0.8.3 tagged and released
 
-The build tag approach is clean, maintainable, and follows Go best practices. Release binaries are portable (no CGO), while local development retains full functionality.
+**After Issue #1 (HTTPS):**
+- [ ] HTTPS support working
+- [ ] Configuration documented
+- [ ] Tests passing
+- [ ] Issue #1 closed
+- [ ] Could release as v0.8.4 or v0.9.0
 
-**No further action required for release.** Optional documentation polish can be done anytime.
+---
+
+## 🎉 Celebrate Today's Wins!
+
+**What we accomplished:**
+- ✅ Complete audit of codebase
+- ✅ 5 new MCP tools
+- ✅ Comprehensive documentation (900+ lines!)
+- ✅ 100% test coverage for new features
+- ✅ v0.8.2 released (aligned with weave-cli)
+- ✅ Closed issues #5 and #6
+- ✅ ~3 hours of focused work
+
+**Time well spent!** 🚀
+
+---
+
+## 📞 Questions?
+
+If anything is unclear tomorrow:
+1. Check this file for context
+2. Review MCP_TOOLS.md for examples
+3. Look at existing handlers for patterns
+4. Check EXAMPLES.md for usage patterns
+
+**Have fun coding!** 🎨
