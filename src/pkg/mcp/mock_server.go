@@ -293,6 +293,102 @@ func (s *MockServer) registerTools() {
 		},
 		Handler: s.handleShowCollectionEmbeddings,
 	})
+
+	// Phase 4 tools
+	s.registerTool(Tool{
+		Name:        "get_collection_stats",
+		Description: "Get statistics for a collection including document count and schema info",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleGetCollectionStats,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_all_documents",
+		Description: "Delete all documents from a collection or all collections",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection (optional)",
+				},
+			},
+		},
+		Handler: s.handleDeleteAllDocuments,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_document_by_name",
+		Description: "Show a document by filename instead of ID",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"filename": map[string]interface{}{
+					"type":        "string",
+					"description": "Filename to search for",
+				},
+			},
+			"required": []string{"collection", "filename"},
+		},
+		Handler: s.handleShowDocumentByName,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_document_by_name",
+		Description: "Delete a document by filename instead of ID",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"filename": map[string]interface{}{
+					"type":        "string",
+					"description": "Filename to search for",
+				},
+			},
+			"required": []string{"collection", "filename"},
+		},
+		Handler: s.handleDeleteDocumentByName,
+	})
+
+	s.registerTool(Tool{
+		Name:        "execute_query",
+		Description: "Execute a natural language query against documents",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Natural language query",
+				},
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection (optional)",
+				},
+				"limit": map[string]interface{}{
+					"type":        "number",
+					"description": "Maximum number of results (default: 5)",
+				},
+			},
+			"required": []string{"query"},
+		},
+		Handler: s.handleExecuteQuery,
+	})
 }
 
 // registerTool registers a tool with the mock server
@@ -681,6 +777,257 @@ func (s *MockServer) handleShowCollectionEmbeddings(ctx context.Context, args ma
 		"model":      "text-embedding-3-small",
 		"dimensions": 1536,
 		"provider":   "openai",
+	}, nil
+}
+
+// Phase 4 tool handlers
+
+func (s *MockServer) handleGetCollectionStats(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	name, ok := args["name"].(string)
+	if !ok || name == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Verify collection exists
+	_, err := s.mockDB.GetCollectionInfo(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get collection info: %w", err)
+	}
+
+	// Get document count
+	count, err := s.mockDB.CountDocuments(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count documents: %w", err)
+	}
+
+	return map[string]interface{}{
+		"collection":     name,
+		"document_count": count,
+		"schema": map[string]interface{}{
+			"vectorizer": "text-embedding-3-small",
+			"properties": 3,
+		},
+	}, nil
+}
+
+func (s *MockServer) handleDeleteAllDocuments(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, _ := args["collection"].(string)
+
+	if collectionName == "" {
+		// Delete all documents from all collections
+		collections, err := s.mockDB.ListCollections(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list collections: %w", err)
+		}
+
+		totalDeleted := 0
+		for _, coll := range collections {
+			docs, err := s.mockDB.ListDocuments(ctx, coll, 1000, 0)
+			if err != nil {
+				continue
+			}
+			for _, doc := range docs {
+				err := s.mockDB.DeleteDocument(ctx, coll, doc.ID)
+				if err != nil {
+					continue
+				}
+				totalDeleted++
+			}
+		}
+
+		return map[string]interface{}{
+			"deleted_count":       totalDeleted,
+			"collections_cleaned": len(collections),
+		}, nil
+	}
+
+	// Delete all documents from specific collection
+	docs, err := s.mockDB.ListDocuments(ctx, collectionName, 1000, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list documents: %w", err)
+	}
+
+	deletedCount := 0
+	for _, doc := range docs {
+		err := s.mockDB.DeleteDocument(ctx, collectionName, doc.ID)
+		if err != nil {
+			continue
+		}
+		deletedCount++
+	}
+
+	return map[string]interface{}{
+		"collection":    collectionName,
+		"deleted_count": deletedCount,
+	}, nil
+}
+
+func (s *MockServer) handleShowDocumentByName(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["collection"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	filename, ok := args["filename"].(string)
+	if !ok || filename == "" {
+		return nil, fmt.Errorf("filename is required")
+	}
+
+	// List documents and search by filename
+	docs, err := s.mockDB.ListDocuments(ctx, collectionName, 100, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list documents: %w", err)
+	}
+
+	// Search for document with matching filename
+	for _, doc := range docs {
+		if doc.URL != "" && doc.URL == filename {
+			return map[string]interface{}{
+				"document_id": doc.ID,
+				"collection":  collectionName,
+				"url":         doc.URL,
+				"text":        doc.Text,
+				"metadata":    doc.Metadata,
+			}, nil
+		}
+		if doc.Metadata != nil {
+			if filenameVal, ok := doc.Metadata["filename"].(string); ok && filenameVal == filename {
+				return map[string]interface{}{
+					"document_id": doc.ID,
+					"collection":  collectionName,
+					"url":         doc.URL,
+					"text":        doc.Text,
+					"metadata":    doc.Metadata,
+				}, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("document with filename '%s' not found in collection '%s'", filename, collectionName)
+}
+
+func (s *MockServer) handleDeleteDocumentByName(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["collection"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	filename, ok := args["filename"].(string)
+	if !ok || filename == "" {
+		return nil, fmt.Errorf("filename is required")
+	}
+
+	// List documents and search by filename
+	docs, err := s.mockDB.ListDocuments(ctx, collectionName, 100, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list documents: %w", err)
+	}
+
+	// Search for document with matching filename and delete it
+	for _, doc := range docs {
+		if doc.URL != "" && doc.URL == filename {
+			err := s.mockDB.DeleteDocument(ctx, collectionName, doc.ID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete document: %w", err)
+			}
+			return map[string]interface{}{
+				"document_id": doc.ID,
+				"collection":  collectionName,
+				"filename":    filename,
+				"status":      "deleted",
+			}, nil
+		}
+		if doc.Metadata != nil {
+			if filenameVal, ok := doc.Metadata["filename"].(string); ok && filenameVal == filename {
+				err := s.mockDB.DeleteDocument(ctx, collectionName, doc.ID)
+				if err != nil {
+					return nil, fmt.Errorf("failed to delete document: %w", err)
+				}
+				return map[string]interface{}{
+					"document_id": doc.ID,
+					"collection":  collectionName,
+					"filename":    filename,
+					"status":      "deleted",
+				}, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("document with filename '%s' not found in collection '%s'", filename, collectionName)
+}
+
+func (s *MockServer) handleExecuteQuery(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	query, ok := args["query"].(string)
+	if !ok || query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+
+	collectionName, _ := args["collection"].(string)
+	limit := 5
+	if limitArg, ok := args["limit"].(float64); ok {
+		limit = int(limitArg)
+	}
+
+	// If no collection specified, search all collections
+	if collectionName == "" {
+		collections, err := s.mockDB.ListCollections(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list collections: %w", err)
+		}
+
+		allResults := []interface{}{}
+		for _, coll := range collections {
+			results, err := s.mockDB.Search(ctx, coll, query, limit)
+			if err != nil {
+				continue
+			}
+
+			for _, result := range results {
+				resultMap := map[string]interface{}{
+					"collection":  coll,
+					"document_id": result.Document.ID,
+					"text":        result.Document.Text,
+					"url":         result.Document.URL,
+					"metadata":    result.Document.Metadata,
+					"score":       result.Score,
+				}
+				allResults = append(allResults, resultMap)
+			}
+		}
+
+		if len(allResults) > limit {
+			allResults = allResults[:limit]
+		}
+
+		return map[string]interface{}{
+			"query":   query,
+			"results": allResults,
+			"count":   len(allResults),
+		}, nil
+	}
+
+	// Query specific collection
+	results, err := s.mockDB.Search(ctx, collectionName, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	formattedResults := make([]interface{}, len(results))
+	for i, result := range results {
+		formattedResults[i] = map[string]interface{}{
+			"document_id": result.Document.ID,
+			"text":        result.Document.Text,
+			"url":         result.Document.URL,
+			"metadata":    result.Document.Metadata,
+			"score":       result.Score,
+		}
+	}
+
+	return map[string]interface{}{
+		"collection": collectionName,
+		"query":      query,
+		"results":    formattedResults,
+		"count":      len(formattedResults),
 	}, nil
 }
 

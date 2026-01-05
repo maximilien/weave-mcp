@@ -27,6 +27,16 @@ type mockVectorDBClient struct {
 	getSchemaError   error
 	collectionCount  int64
 	getCountError    error
+
+	// Document mocks
+	documents     []*vectordb.Document
+	listDocsError error
+	deleteError   error
+	deletedDocs   []string // Track deleted document IDs
+
+	// Search mocks
+	searchResults []*vectordb.QueryResult
+	searchError   error
 }
 
 func (m *mockVectorDBClient) Health(ctx context.Context) error {
@@ -75,6 +85,10 @@ func (m *mockVectorDBClient) UpdateDocument(ctx context.Context, collectionName 
 }
 
 func (m *mockVectorDBClient) DeleteDocument(ctx context.Context, collectionName, documentID string) error {
+	if m.deleteError != nil {
+		return m.deleteError
+	}
+	m.deletedDocs = append(m.deletedDocs, documentID)
 	return nil
 }
 
@@ -87,11 +101,17 @@ func (m *mockVectorDBClient) DeleteDocumentsByMetadata(ctx context.Context, coll
 }
 
 func (m *mockVectorDBClient) ListDocuments(ctx context.Context, collectionName string, limit int, offset int) ([]*vectordb.Document, error) {
-	return nil, nil
+	if m.listDocsError != nil {
+		return nil, m.listDocsError
+	}
+	return m.documents, nil
 }
 
 func (m *mockVectorDBClient) SearchSemantic(ctx context.Context, collectionName, query string, options *vectordb.QueryOptions) ([]*vectordb.QueryResult, error) {
-	return nil, nil
+	if m.searchError != nil {
+		return nil, m.searchError
+	}
+	return m.searchResults, nil
 }
 
 func (m *mockVectorDBClient) SearchBM25(ctx context.Context, collectionName, query string, options *vectordb.QueryOptions) ([]*vectordb.QueryResult, error) {
@@ -487,5 +507,537 @@ func TestHandleShowCollectionEmbeddings(t *testing.T) {
 		require.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "failed to get collection schema")
+	})
+}
+
+// TestHandleGetCollectionStats tests the get_collection_stats handler
+func TestHandleGetCollectionStats(t *testing.T) {
+	t.Run("success with valid collection", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			collectionSchema: &vectordb.CollectionSchema{
+				Class:      "articles",
+				Vectorizer: "text-embedding-3-small",
+				Properties: []vectordb.SchemaProperty{
+					{Name: "text", DataType: []string{"text"}},
+					{Name: "url", DataType: []string{"text"}},
+				},
+			},
+			getSchemaError:  nil,
+			collectionCount: 42,
+			getCountError:   nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"name": "articles",
+		}
+
+		result, err := server.handleGetCollectionStats(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "articles", response["collection"])
+		assert.Equal(t, int64(42), response["document_count"])
+
+		schema, ok := response["schema"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "text-embedding-3-small", schema["vectorizer"])
+		assert.Equal(t, 2, schema["properties"])
+	})
+
+	t.Run("missing collection name", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{}
+
+		result, err := server.handleGetCollectionStats(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "collection name is required")
+	})
+
+	t.Run("schema error", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			collectionSchema: nil,
+			getSchemaError:   errors.New("collection not found"),
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"name": "nonexistent",
+		}
+
+		result, err := server.handleGetCollectionStats(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to get collection schema")
+	})
+
+	t.Run("count error", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			collectionSchema: &vectordb.CollectionSchema{
+				Class:      "articles",
+				Vectorizer: "text-embedding-3-small",
+			},
+			getSchemaError:  nil,
+			collectionCount: 0,
+			getCountError:   errors.New("count failed"),
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"name": "articles",
+		}
+
+		result, err := server.handleGetCollectionStats(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to count documents")
+	})
+}
+
+// TestHandleDeleteAllDocuments tests the delete_all_documents handler
+func TestHandleDeleteAllDocuments(t *testing.T) {
+	t.Run("delete from specific collection", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", Text: "test1"},
+				{ID: "doc2", Text: "test2"},
+				{ID: "doc3", Text: "test3"},
+			},
+			listDocsError: nil,
+			deleteError:   nil,
+			deletedDocs:   []string{},
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+		}
+
+		result, err := server.handleDeleteAllDocuments(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "articles", response["collection"])
+		assert.Equal(t, 3, response["deleted_count"])
+		assert.Len(t, mockClient.deletedDocs, 3)
+	})
+
+	t.Run("delete from all collections", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			collections: []vectordb.CollectionInfo{
+				{Name: "articles", Count: 2},
+				{Name: "docs", Count: 1},
+			},
+			listCollError: nil,
+			documents: []*vectordb.Document{
+				{ID: "doc1", Text: "test1"},
+				{ID: "doc2", Text: "test2"},
+			},
+			listDocsError: nil,
+			deleteError:   nil,
+			deletedDocs:   []string{},
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{}
+
+		result, err := server.handleDeleteAllDocuments(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, 2, response["collections_cleaned"])
+		assert.Equal(t, 4, response["deleted_count"]) // 2 collections × 2 docs each
+	})
+
+	t.Run("list documents error", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents:     nil,
+			listDocsError: errors.New("failed to list documents"),
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+		}
+
+		result, err := server.handleDeleteAllDocuments(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to list documents")
+	})
+}
+
+// TestHandleShowDocumentByName tests the show_document_by_name handler
+func TestHandleShowDocumentByName(t *testing.T) {
+	t.Run("find document by URL", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", URL: "file1.txt", Text: "content1"},
+				{ID: "doc2", URL: "file2.txt", Text: "content2"},
+			},
+			listDocsError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "file1.txt",
+		}
+
+		result, err := server.handleShowDocumentByName(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "doc1", response["document_id"])
+		assert.Equal(t, "articles", response["collection"])
+		assert.Equal(t, "file1.txt", response["url"])
+		assert.Equal(t, "content1", response["text"])
+	})
+
+	t.Run("find document by metadata filename", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{
+					ID:       "doc1",
+					Text:     "content1",
+					Metadata: map[string]interface{}{"filename": "file1.txt"},
+				},
+			},
+			listDocsError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "file1.txt",
+		}
+
+		result, err := server.handleShowDocumentByName(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "doc1", response["document_id"])
+		assert.Equal(t, "articles", response["collection"])
+	})
+
+	t.Run("document not found", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", URL: "file1.txt", Text: "content1"},
+			},
+			listDocsError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "nonexistent.txt",
+		}
+
+		result, err := server.handleShowDocumentByName(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "document with filename 'nonexistent.txt' not found")
+	})
+
+	t.Run("missing collection name", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"filename": "file1.txt",
+		}
+
+		result, err := server.handleShowDocumentByName(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "collection name is required")
+	})
+
+	t.Run("missing filename", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+		}
+
+		result, err := server.handleShowDocumentByName(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "filename is required")
+	})
+}
+
+// TestHandleDeleteDocumentByName tests the delete_document_by_name handler
+func TestHandleDeleteDocumentByName(t *testing.T) {
+	t.Run("delete document by URL", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", URL: "file1.txt", Text: "content1"},
+				{ID: "doc2", URL: "file2.txt", Text: "content2"},
+			},
+			listDocsError: nil,
+			deleteError:   nil,
+			deletedDocs:   []string{},
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "file1.txt",
+		}
+
+		result, err := server.handleDeleteDocumentByName(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "doc1", response["document_id"])
+		assert.Equal(t, "articles", response["collection"])
+		assert.Equal(t, "file1.txt", response["filename"])
+		assert.Equal(t, "deleted", response["status"])
+		assert.Contains(t, mockClient.deletedDocs, "doc1")
+	})
+
+	t.Run("delete document by metadata filename", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{
+					ID:       "doc1",
+					Text:     "content1",
+					Metadata: map[string]interface{}{"filename": "file1.txt"},
+				},
+			},
+			listDocsError: nil,
+			deleteError:   nil,
+			deletedDocs:   []string{},
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "file1.txt",
+		}
+
+		result, err := server.handleDeleteDocumentByName(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "doc1", response["document_id"])
+		assert.Equal(t, "deleted", response["status"])
+		assert.Contains(t, mockClient.deletedDocs, "doc1")
+	})
+
+	t.Run("document not found", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", URL: "file1.txt", Text: "content1"},
+			},
+			listDocsError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "nonexistent.txt",
+		}
+
+		result, err := server.handleDeleteDocumentByName(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "document with filename 'nonexistent.txt' not found")
+	})
+
+	t.Run("delete error", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			documents: []*vectordb.Document{
+				{ID: "doc1", URL: "file1.txt", Text: "content1"},
+			},
+			listDocsError: nil,
+			deleteError:   errors.New("delete failed"),
+			deletedDocs:   []string{},
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+			"filename":   "file1.txt",
+		}
+
+		result, err := server.handleDeleteDocumentByName(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to delete document")
+	})
+}
+
+// TestHandleExecuteQuery tests the execute_query handler
+func TestHandleExecuteQuery(t *testing.T) {
+	t.Run("query specific collection", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			searchResults: []*vectordb.QueryResult{
+				{
+					Document: vectordb.Document{
+						ID:       "doc1",
+						Text:     "machine learning basics",
+						URL:      "ml.txt",
+						Metadata: map[string]interface{}{"category": "ai"},
+					},
+					Score: 0.95,
+				},
+				{
+					Document: vectordb.Document{
+						ID:       "doc2",
+						Text:     "deep learning tutorial",
+						URL:      "dl.txt",
+						Metadata: map[string]interface{}{"category": "ai"},
+					},
+					Score: 0.87,
+				},
+			},
+			searchError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"query":      "machine learning",
+			"collection": "articles",
+			"limit":      float64(5),
+		}
+
+		result, err := server.handleExecuteQuery(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "articles", response["collection"])
+		assert.Equal(t, "machine learning", response["query"])
+		assert.Equal(t, 2, response["count"])
+
+		results, ok := response["results"].([]interface{})
+		require.True(t, ok)
+		assert.Len(t, results, 2)
+
+		result1, ok := results[0].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "doc1", result1["document_id"])
+		assert.Equal(t, "machine learning basics", result1["text"])
+		assert.Equal(t, 0.95, result1["score"])
+	})
+
+	t.Run("query all collections", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			collections: []vectordb.CollectionInfo{
+				{Name: "articles", Count: 1},
+				{Name: "docs", Count: 1},
+			},
+			listCollError: nil,
+			searchResults: []*vectordb.QueryResult{
+				{
+					Document: vectordb.Document{
+						ID:   "doc1",
+						Text: "test document",
+					},
+					Score: 0.9,
+				},
+			},
+			searchError: nil,
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"query": "test query",
+			"limit": float64(5),
+		}
+
+		result, err := server.handleExecuteQuery(context.Background(), args)
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		assert.Equal(t, "test query", response["query"])
+		results, ok := response["results"].([]interface{})
+		require.True(t, ok)
+		assert.Greater(t, len(results), 0)
+	})
+
+	t.Run("missing query", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"collection": "articles",
+		}
+
+		result, err := server.handleExecuteQuery(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "query is required")
+	})
+
+	t.Run("search error", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{
+			searchResults: nil,
+			searchError:   errors.New("search failed"),
+		}
+		server := createTestServer(mockClient)
+
+		args := map[string]interface{}{
+			"query":      "test",
+			"collection": "articles",
+		}
+
+		result, err := server.handleExecuteQuery(context.Background(), args)
+
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to execute query")
 	})
 }

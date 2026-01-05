@@ -46,17 +46,18 @@ The Weave MCP Server supports two transport modes:
 
 ## MCP Tools
 
-The server exposes 18 MCP tools for comprehensive vector database operations:
+The server exposes 23 MCP tools for comprehensive vector database operations:
 
-### Collection Management (6 tools)
+### Collection Management (7 tools)
 
 - `list_collections` - List all collections in the vector database
 - `create_collection` - Create a new collection with specified schema
 - `delete_collection` - Delete a collection and all its documents
 - `count_collections` - Count total number of collections
 - `show_collection` - Show detailed collection info (schema, count, properties)
+- `get_collection_stats` - Get collection statistics (document count, schema info)
 
-### Document Management (8 tools)
+### Document Management (11 tools)
 
 - `list_documents` - List documents in a collection with pagination
 - `create_document` - Create a new document in a collection
@@ -66,10 +67,15 @@ The server exposes 18 MCP tools for comprehensive vector database operations:
 - `update_document` - Update a document's content or metadata
 - `delete_document` - Delete a document from a collection
 - `count_documents` - Count documents in a collection
+- `show_document_by_name` - Show a document by its filename
+- `delete_document_by_name` - Delete a document by its filename
+- `delete_all_documents` - Delete all documents from a collection or all
+  collections
 
-### Query Operations (1 tool)
+### Query Operations (2 tools)
 
 - `query_documents` - Perform semantic search on documents
+- `execute_query` - Execute semantic search across one or all collections
 
 ### AI-Powered Tools (2 tools)
 

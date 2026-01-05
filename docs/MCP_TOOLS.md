@@ -1,9 +1,9 @@
 # MCP Tools Reference
 
-Complete reference for all 18 MCP tools provided by the Weave MCP Server.
+Complete reference for all 23 MCP tools provided by the Weave MCP Server.
 
-**Version:** 0.5.0 (in development)
-**Last Updated:** 2026-01-03
+**Version:** 0.6.0 (in development)
+**Last Updated:** 2026-01-05
 
 ---
 
@@ -16,6 +16,7 @@ Complete reference for all 18 MCP tools provided by the Weave MCP Server.
 | `delete_collection` | Collections | name | Delete collection |
 | `count_collections` | Collections | none | Count collections |
 | `show_collection` | Collections | name | Show collection details |
+| `get_collection_stats` | Collections | name | Get collection statistics |
 | `list_documents` | Documents | collection, limit | List documents |
 | `create_document` | Documents | collection, url, text, metadata | Create document |
 | `batch_create_documents` | Documents | collection, documents | Batch create documents |
@@ -23,7 +24,11 @@ Complete reference for all 18 MCP tools provided by the Weave MCP Server.
 | `update_document` | Documents | collection, id, text, metadata | Update document |
 | `delete_document` | Documents | collection, id | Delete document |
 | `count_documents` | Documents | collection | Count documents |
+| `show_document_by_name` | Documents | collection, filename | Show document by name |
+| `delete_document_by_name` | Documents | collection, filename | Delete document by name |
+| `delete_all_documents` | Documents | collection (optional) | Delete all documents |
 | `query_documents` | Query | collection, query, top_k | Semantic search |
+| `execute_query` | Query | query, collection, limit | Execute semantic query |
 | `suggest_schema` | AI | source_path, collection_name | AI schema suggestions |
 | `suggest_chunking` | AI | source_path, collection_name | AI chunking suggestions |
 | `health_check` | Monitoring | none | Database health check |
@@ -176,6 +181,35 @@ Show detailed information about a collection including schema, count, and proper
 - Inspect collection schema before adding documents
 - Debug collection configuration
 - Verify vectorizer settings
+
+---
+
+### get_collection_stats
+
+Get statistics for a collection including document count and schema information.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | Yes | Collection name |
+
+**Response:**
+```json
+{
+  "collection": "articles",
+  "document_count": 42,
+  "schema": {
+    "vectorizer": "text-embedding-3-small",
+    "properties": 3
+  }
+}
+```
+
+**Example Use Cases:**
+- Monitor collection size and growth
+- Quick overview of collection statistics
+- Verify collection configuration
 
 ---
 
@@ -370,6 +404,101 @@ Count documents in a collection.
 
 ---
 
+### show_document_by_name
+
+Show a document by its filename (from URL or metadata).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `collection` | string | Yes | Collection name |
+| `filename` | string | Yes | Filename to search for |
+
+**Response:**
+```json
+{
+  "document_id": "doc123",
+  "collection": "articles",
+  "url": "file.txt",
+  "text": "Document content...",
+  "metadata": {
+    "filename": "file.txt",
+    "author": "John Doe"
+  }
+}
+```
+
+**Example Use Cases:**
+- Find document by filename without knowing ID
+- Search documents by metadata filename field
+- Lookup documents imported from files
+
+---
+
+### delete_document_by_name
+
+Delete a document by its filename (from URL or metadata).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `collection` | string | Yes | Collection name |
+| `filename` | string | Yes | Filename to search for |
+
+**Response:**
+```json
+{
+  "document_id": "doc123",
+  "collection": "articles",
+  "filename": "file.txt",
+  "status": "deleted"
+}
+```
+
+**Example Use Cases:**
+- Remove documents by filename
+- Clean up specific imported files
+- Delete documents without knowing their ID
+
+---
+
+### delete_all_documents
+
+Delete all documents from a collection or all collections.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `collection` | string | No | Collection name (if omitted, deletes from all collections) |
+
+**Response (specific collection):**
+```json
+{
+  "collection": "articles",
+  "deleted_count": 150
+}
+```
+
+**Response (all collections):**
+```json
+{
+  "deleted_count": 500,
+  "collections_cleaned": 3
+}
+```
+
+**Warning:** This operation is destructive and cannot be undone. Use with caution.
+
+**Example Use Cases:**
+- Reset collection to empty state
+- Clean up test data
+- Bulk delete before re-import
+
+---
+
 ## Query Operations
 
 ### query_documents
@@ -406,6 +535,69 @@ Perform semantic search on documents using natural language queries.
 - Results are sorted by relevance (score descending)
 - Score ranges from 0.0 (no match) to 1.0 (perfect match)
 - Uses semantic similarity, not keyword matching
+
+---
+
+### execute_query
+
+Execute a semantic search query across one or all collections.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `query` | string | Yes | - | Search query (natural language) |
+| `collection` | string | No | - | Collection name (if omitted, searches all collections) |
+| `limit` | integer | No | 5 | Number of results to return |
+
+**Response (specific collection):**
+```json
+{
+  "collection": "articles",
+  "query": "machine learning basics",
+  "results": [
+    {
+      "document_id": "doc123",
+      "text": "Introduction to machine learning...",
+      "url": "ml-intro.txt",
+      "metadata": {"category": "ai"},
+      "score": 0.95
+    }
+  ],
+  "count": 1
+}
+```
+
+**Response (all collections):**
+```json
+{
+  "query": "machine learning basics",
+  "results": [
+    {
+      "collection": "articles",
+      "document_id": "doc123",
+      "text": "Introduction to machine learning...",
+      "url": "ml-intro.txt",
+      "metadata": {"category": "ai"},
+      "score": 0.95
+    },
+    {
+      "collection": "docs",
+      "document_id": "doc456",
+      "text": "ML fundamentals...",
+      "url": "ml-fund.txt",
+      "metadata": {"category": "tutorial"},
+      "score": 0.87
+    }
+  ],
+  "count": 2
+}
+```
+
+**Example Use Cases:**
+- Search across multiple collections simultaneously
+- Find relevant documents without knowing which collection they're in
+- Cross-collection semantic search
 
 ---
 

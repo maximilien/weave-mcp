@@ -2,8 +2,8 @@
 
 Practical end-to-end examples for using Weave MCP Server tools.
 
-**Version:** 0.5.0 (in development)
-**Last Updated:** 2026-01-03
+**Version:** 0.6.0 (in development)
+**Last Updated:** 2026-01-05
 
 ---
 
@@ -229,6 +229,51 @@ Answer:"""
 response = llm.generate(prompt)
 ```
 
+### Step 5: Cross-Collection Search
+
+**Search across multiple collections simultaneously:**
+
+```json
+// Tool: execute_query
+{
+  "query": "machine learning applications",
+  "limit": 5
+}
+```
+
+**Response:**
+```json
+{
+  "query": "machine learning applications",
+  "results": [
+    {
+      "collection": "knowledge_base",
+      "document_id": "doc1",
+      "text": "Machine learning is used in...",
+      "score": 0.92
+    },
+    {
+      "collection": "articles",
+      "document_id": "doc5",
+      "text": "ML applications in healthcare...",
+      "score": 0.87
+    }
+  ],
+  "count": 2
+}
+```
+
+**Search specific collection only:**
+
+```json
+// Tool: execute_query
+{
+  "query": "machine learning applications",
+  "collection": "knowledge_base",
+  "limit": 3
+}
+```
+
 ---
 
 ## Document Management
@@ -288,6 +333,84 @@ response = llm.generate(prompt)
 }
 ```
 
+### Find Document by Filename
+
+```json
+// Tool: show_document_by_name
+{
+  "collection": "articles",
+  "filename": "article.txt"
+}
+```
+
+**Response:**
+```json
+{
+  "document_id": "doc123",
+  "collection": "articles",
+  "url": "article.txt",
+  "text": "Document content...",
+  "metadata": {
+    "filename": "article.txt",
+    "author": "John Doe"
+  }
+}
+```
+
+### Delete Document by Filename
+
+```json
+// Tool: delete_document_by_name
+{
+  "collection": "articles",
+  "filename": "old_article.txt"
+}
+```
+
+**Response:**
+```json
+{
+  "document_id": "doc456",
+  "collection": "articles",
+  "filename": "old_article.txt",
+  "status": "deleted"
+}
+```
+
+### Clean Up Collection (Delete All Documents)
+
+```json
+// Tool: delete_all_documents
+{
+  "collection": "articles"
+}
+```
+
+**Response:**
+```json
+{
+  "collection": "articles",
+  "deleted_count": 150
+}
+```
+
+**⚠️ Warning:** This is destructive and cannot be undone!
+
+### Reset All Collections
+
+```json
+// Tool: delete_all_documents
+{}
+```
+
+**Response:**
+```json
+{
+  "deleted_count": 500,
+  "collections_cleaned": 3
+}
+```
+
 ---
 
 ## Monitoring & Health
@@ -332,6 +455,27 @@ response = llm.generate(prompt)
   "schema": {
     "class": "articles",
     "properties": [...]
+  }
+}
+```
+
+### Get Collection Statistics
+
+```json
+// Tool: get_collection_stats
+{
+  "name": "articles"
+}
+```
+
+**Response:**
+```json
+{
+  "collection": "articles",
+  "document_count": 150,
+  "schema": {
+    "vectorizer": "text-embedding-3-small",
+    "properties": 3
   }
 }
 ```
