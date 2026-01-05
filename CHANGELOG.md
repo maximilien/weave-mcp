@@ -8,6 +8,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.0] - 2026-01-05
+
+### Added
+
+- **5 New Phase 4 MCP Tools**: Expanded tool coverage from 18 to 23 tools
+  (28% increase)
+  - **`get_collection_stats`**: Get collection statistics
+    - Returns: document count, schema info (vectorizer, property count)
+    - Use case: Monitor collection size, quick overview of collection status
+  - **`show_document_by_name`**: Find document by filename
+    - Searches by URL or metadata filename field
+    - Returns: document ID, content, metadata
+    - Use case: Lookup documents without knowing ID, search by imported
+      filename
+  - **`delete_document_by_name`**: Delete document by filename
+    - Searches by URL or metadata filename field
+    - Returns: deleted document ID and status
+    - Use case: Remove documents by filename, cleanup imported files
+  - **`delete_all_documents`**: Bulk delete documents
+    - Can delete from specific collection or all collections
+    - Returns: count of deleted documents
+    - Use case: Reset collection, cleanup test data, bulk operations
+  - **`execute_query`**: Cross-collection semantic search
+    - Search across one collection or all collections simultaneously
+    - Returns: ranked results with scores across collections
+    - Use case: Find documents without knowing collection, global search
+
+- **Comprehensive Test Coverage**: Added extensive testing infrastructure
+  - **Mock implementations** for all 5 Phase 4 tools in mock_server.go
+  - **20+ unit tests** with 100% code coverage for Phase 4 handlers
+  - Test cases covering success paths, error conditions, edge cases
+  - Extended mockVectorDBClient with document and search support
+  - All tests passing
+
+- **Enhanced Documentation**
+  - **MCP_TOOLS.md**: Detailed documentation for 5 new tools
+    - Full parameter specifications and response schemas
+    - Usage examples and best practices
+    - Warning about destructive operations
+  - **EXAMPLES.md**: Practical usage examples
+    - Find/delete documents by filename examples
+    - Bulk delete operations (collection-specific and global)
+    - Cross-collection search workflows
+    - RAG integration with execute_query
+  - **README.md**: Updated tool counts and categories
+    - Collection Management: 6 → 7 tools
+    - Document Management: 8 → 11 tools
+    - Query Operations: 1 → 2 tools
+    - Total: 18 → 23 tools
+
+### Changed
+
+- **Version bumps**: Updated documentation versions to 0.6.0
+  - MCP_TOOLS.md: 0.5.0 → 0.6.0
+  - EXAMPLES.md: 0.5.0 → 0.6.0
+
 ## [v0.8.2] - 2026-01-03
 
 ### Added
