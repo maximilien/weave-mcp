@@ -899,7 +899,7 @@ func (s *Server) handleDeleteAllDocuments(ctx context.Context, args map[string]i
 		}
 
 		return map[string]interface{}{
-			"deleted_count":      totalDeleted,
+			"deleted_count":       totalDeleted,
 			"collections_cleaned": len(collections),
 		}, nil
 	}

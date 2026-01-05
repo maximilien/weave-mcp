@@ -58,7 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Success and error case coverage
     - Pattern established for future handler tests
   - Updated `tests/mcp_test.go`: Verify new tools are registered
-  - Updated `src/pkg/mcp/mock_server.go`: Added mock implementations for all new tools
+  - Updated `src/pkg/mcp/mock_server.go`: Added mock implementations for
+    all new tools
 
 - **Audit Infrastructure**: Created docs/audit and docs/planning directories
   - **`docs/audit/AUDIT_SUMMARY.md`**: Executive overview of findings
@@ -100,6 +101,7 @@ the Weave MCP Server through comprehensive documentation and essential new tools
 for health monitoring and embedding management.
 
 **Key Improvements:**
+
 - **18 total MCP tools** (up from 13, +38%)
 - **45% weave-cli coverage** (up from 32%, +13%)
 - **60% documentation coverage** (up from 25%, +35%)

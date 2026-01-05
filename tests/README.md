@@ -4,7 +4,7 @@ This directory contains all tests for weave-mcp, organized by test type.
 
 ## Directory Structure
 
-```
+```text
 tests/
 ├── unit/           # Unit tests - fast, isolated, no external dependencies
 ├── integration/    # Integration tests - test with mock or real databases
@@ -24,6 +24,7 @@ Fast, isolated tests that don't require external services:
 - `weaviate_test.go` - Weaviate client unit tests
 
 **Run unit tests:**
+
 ```bash
 cd tests/unit && go test -v
 ```
@@ -37,11 +38,13 @@ Tests that interact with databases or external services:
 - `mcp_binary_integration_test.go` - MCP binary HTTP API tests
 
 **Run integration tests:**
+
 ```bash
 cd tests/integration && go test -v
 ```
 
 **Skip slow tests:**
+
 ```bash
 cd tests/integration && go test -v -short
 ```
@@ -57,11 +60,13 @@ End-to-end tests that test the complete system:
   - Tests AI features (suggest_schema, suggest_chunking)
 
 **Run E2E tests:**
+
 ```bash
 cd tests/e2e && go test -v
 ```
 
 **Requirements:**
+
 - Docker installed and running
 - OPENAI_API_KEY environment variable set
 - Internet connection to download binaries
@@ -95,6 +100,7 @@ Tests may require these environment variables:
 - `OPENAI_API_KEY` - OpenAI API key (for AI feature tests)
 
 These are loaded from `.env` files in:
+
 - `/Users/maximilien/github/maximilien/weave-mcp/.env`
 - `/Users/maximilien/github/maximilien/weave-cli/.env`
 
@@ -103,6 +109,7 @@ These are loaded from `.env` files in:
 ### Unit Tests
 
 Place in `unit/` if the test:
+
 - Runs in < 1 second
 - Doesn't require external services
 - Uses only mock databases
@@ -111,6 +118,7 @@ Place in `unit/` if the test:
 ### Integration Tests
 
 Place in `integration/` if the test:
+
 - Requires database connection
 - Tests multiple components together
 - May use real external services
@@ -119,6 +127,7 @@ Place in `integration/` if the test:
 ### E2E Tests
 
 Place in `e2e/` if the test:
+
 - Tests complete workflows
 - Requires building binaries
 - Uses Docker containers
@@ -135,6 +144,7 @@ Place in `e2e/` if the test:
 ## CI/CD
 
 GitHub Actions runs:
+
 - Unit tests on every commit
 - Integration tests on pull requests
 - E2E tests on release branches (if configured)
