@@ -7,6 +7,15 @@
 # Schemas defined inline in databases.schemas take precedence over directory schemas
 schemas_dir: ./schemas
 
+# TLS/HTTPS Configuration (Optional)
+# Enable HTTPS for secure communications
+# By default, the server runs on HTTP only for backward compatibility
+tls:
+  enabled: false                    # Set to true to enable HTTPS
+  cert_file: ""                     # Path to TLS certificate file (e.g., ./certs/server.crt)
+  key_file: ""                      # Path to TLS private key file (e.g., ./certs/server.key)
+  auto_redirect: false              # Redirect HTTP to HTTPS (requires both HTTP and HTTPS ports)
+
 # Database Configuration
 databases:
   # Default database type to use

@@ -13,7 +13,9 @@ Go and designed to work seamlessly with the
 
 ## Features
 
-- **Dual Transport Support**: HTTP and stdio MCP transports
+- **Dual Transport Support**: HTTP/HTTPS and stdio MCP transports
+- **HTTPS/TLS Support**: Optional HTTPS with auto-redirect from HTTP
+  ([setup guide](docs/HTTPS_SETUP.md))
 - **Vector Database Support**: 11 databases supported - Weaviate, Supabase,
   MongoDB, Milvus, Chroma, Qdrant, Neo4j, Pinecone, OpenSearch, Elasticsearch,
   and Mock
@@ -30,12 +32,14 @@ Go and designed to work seamlessly with the
 
 The Weave MCP Server supports two transport modes:
 
-### HTTP Transport
+### HTTP/HTTPS Transport
 
 - **Binary**: `bin/weave-mcp`
-- **URL**: `http://localhost:8030`
+- **URL**: `http://localhost:8030` or `https://localhost:8030` (with TLS enabled)
 - **Use Case**: Web applications, API integrations, testing
-- **Features**: RESTful API endpoints, health checks, easy debugging
+- **Features**: RESTful API endpoints, health checks, easy debugging, optional
+  TLS/HTTPS
+- **HTTPS Setup**: See [HTTPS Setup Guide](docs/HTTPS_SETUP.md)
 
 ### stdio Transport
 

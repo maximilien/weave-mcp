@@ -76,10 +76,19 @@ type DatabasesConfig struct {
 	Schemas         []SchemaDefinition `yaml:"schemas,omitempty"`
 }
 
+// TLSConfig holds TLS/HTTPS configuration
+type TLSConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	CertFile     string `yaml:"cert_file,omitempty"`
+	KeyFile      string `yaml:"key_file,omitempty"`
+	AutoRedirect bool   `yaml:"auto_redirect,omitempty"`
+}
+
 // Config holds the complete application configuration
 type Config struct {
 	Databases  DatabasesConfig `yaml:"databases"`
 	SchemasDir string          `yaml:"schemas_dir,omitempty"`
+	TLS        TLSConfig       `yaml:"tls,omitempty"`
 }
 
 // LoadConfig loads configuration from files and environment variables

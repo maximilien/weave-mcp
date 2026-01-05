@@ -45,6 +45,10 @@ func main() {
 		corsMethods = flag.String("cors-methods", "GET,POST,PUT,DELETE,OPTIONS", "Comma-separated list of allowed CORS methods")
 		corsHeaders = flag.String("cors-headers", "Content-Type,Authorization,X-Requested-With", "Comma-separated list of allowed CORS headers")
 		corsMaxAge  = flag.Int("cors-max-age", 86400, "CORS preflight cache max age in seconds")
+		tlsEnabled  = flag.Bool("tls", false, "Enable HTTPS/TLS (default: false, runs HTTP only)")
+		tlsCertFile = flag.String("tls-cert", "", "Path to TLS certificate file (e.g., ./certs/server.crt)")
+		tlsKeyFile  = flag.String("tls-key", "", "Path to TLS private key file (e.g., ./certs/server.key)")
+		tlsRedirect = flag.Bool("tls-redirect", false, "Auto-redirect HTTP to HTTPS (requires both ports)")
 		showVersion = flag.Bool("version", false, "Show version information")
 	)
 	flag.Parse()
@@ -136,7 +140,37 @@ func main() {
 		zap.Strings("headers", corsConfig.AllowedHeaders),
 		zap.Int("max_age", corsConfig.MaxAge))
 
-	// Create HTTP server
+	// Determine TLS configuration (command-line flags override config file)
+	useTLS := *tlsEnabled || cfg.TLS.Enabled
+	certFile := *tlsCertFile
+	keyFile := *tlsKeyFile
+	autoRedirect := *tlsRedirect || cfg.TLS.AutoRedirect
+
+	// Use config file paths if command-line flags are not set
+	if certFile == "" && cfg.TLS.CertFile != "" {
+		certFile = cfg.TLS.CertFile
+	}
+	if keyFile == "" && cfg.TLS.KeyFile != "" {
+		keyFile = cfg.TLS.KeyFile
+	}
+
+	// Validate TLS configuration if enabled
+	if useTLS {
+		if certFile == "" || keyFile == "" {
+			logger.Fatal("TLS enabled but certificate or key file not specified",
+				zap.Bool("tls_enabled", useTLS),
+				zap.String("cert_file", certFile),
+				zap.String("key_file", keyFile))
+		}
+		if _, err := os.Stat(certFile); os.IsNotExist(err) {
+			logger.Fatal("TLS certificate file not found", zap.String("cert_file", certFile))
+		}
+		if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+			logger.Fatal("TLS key file not found", zap.String("key_file", keyFile))
+		}
+	}
+
+	// Create HTTP/HTTPS server
 	addr := fmt.Sprintf("%s:%s", *host, *port)
 	httpServer := &http.Server{
 		Addr:         addr,
@@ -146,15 +180,53 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	// Start server in goroutine
-	go func() {
-		logger.Info("Starting Weave MCP Server",
-			zap.String("address", addr),
-			zap.String("version", version.Version),
-			zap.String("git_commit", version.GitCommit))
+	// Start HTTP to HTTPS redirect server if enabled
+	var redirectServer *http.Server
+	if useTLS && autoRedirect {
+		redirectAddr := fmt.Sprintf("%s:80", *host)
+		redirectServer = &http.Server{
+			Addr: redirectAddr,
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				httpsURL := "https://" + r.Host + r.RequestURI
+				http.Redirect(w, r, httpsURL, http.StatusMovedPermanently)
+			}),
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+		}
 
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", zap.Error(err))
+		go func() {
+			logger.Info("Starting HTTP to HTTPS redirect server",
+				zap.String("address", redirectAddr))
+			if err := redirectServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Error("HTTP redirect server error", zap.Error(err))
+			}
+		}()
+	}
+
+	// Start main server in goroutine
+	go func() {
+		if useTLS {
+			logger.Info("Starting Weave MCP Server (HTTPS)",
+				zap.String("address", addr),
+				zap.String("version", version.Version),
+				zap.String("git_commit", version.GitCommit),
+				zap.String("protocol", "HTTPS"),
+				zap.String("cert_file", certFile),
+				zap.Bool("auto_redirect", autoRedirect))
+
+			if err := httpServer.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+				logger.Fatal("Failed to start HTTPS server", zap.Error(err))
+			}
+		} else {
+			logger.Info("Starting Weave MCP Server (HTTP)",
+				zap.String("address", addr),
+				zap.String("version", version.Version),
+				zap.String("git_commit", version.GitCommit),
+				zap.String("protocol", "HTTP"))
+
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				logger.Fatal("Failed to start HTTP server", zap.Error(err))
+			}
 		}
 	}()
 
@@ -169,6 +241,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Shutdown redirect server if running
+	if redirectServer != nil {
+		if err := redirectServer.Shutdown(ctx); err != nil {
+			logger.Error("Redirect server forced to shutdown", zap.Error(err))
+		}
+	}
+
+	// Shutdown main server
 	if err := httpServer.Shutdown(ctx); err != nil {
 		logger.Error("Server forced to shutdown", zap.Error(err))
 	}
