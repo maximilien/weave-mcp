@@ -826,3 +826,304 @@ func (s *Server) handleShowCollectionEmbeddings(ctx context.Context, args map[st
 		"provider":   "openai",
 	}, nil
 }
+
+// handleGetCollectionStats returns statistics for a collection
+func (s *Server) handleGetCollectionStats(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["name"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	// Create timeout context for collection operations
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeCollection)
+	defer cancel()
+
+	// Get collection schema/info
+	schema, err := s.dbClient.GetSchema(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to get collection schema", err)
+	}
+
+	// Get document count
+	count, err := s.dbClient.GetCollectionCount(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to count documents", err)
+	}
+
+	// Build stats response
+	stats := map[string]interface{}{
+		"collection":     collectionName,
+		"document_count": count,
+		"schema": map[string]interface{}{
+			"vectorizer": schema.Vectorizer,
+			"properties": len(schema.Properties),
+		},
+	}
+
+	return stats, nil
+}
+
+// handleDeleteAllDocuments deletes all documents from a collection or all collections
+func (s *Server) handleDeleteAllDocuments(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, _ := args["collection"].(string)
+
+	// Create timeout context for delete operations
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
+	if collectionName == "" {
+		// Delete all documents from all collections
+		collections, err := s.dbClient.ListCollections(timeoutCtx)
+		if err != nil {
+			return nil, s.enhanceError("failed to list collections", err)
+		}
+
+		totalDeleted := 0
+		for _, coll := range collections {
+			// Get all documents in collection
+			docs, err := s.dbClient.ListDocuments(timeoutCtx, coll.Name, 10000, 0) // Large limit, offset 0
+			if err != nil {
+				s.logger.Warn(fmt.Sprintf("Failed to list documents in %s: %v", coll.Name, err))
+				continue
+			}
+
+			// Delete each document
+			for _, doc := range docs {
+				err := s.dbClient.DeleteDocument(timeoutCtx, coll.Name, doc.ID)
+				if err != nil {
+					s.logger.Warn(fmt.Sprintf("Failed to delete document %s: %v", doc.ID, err))
+					continue
+				}
+				totalDeleted++
+			}
+		}
+
+		return map[string]interface{}{
+			"deleted_count":      totalDeleted,
+			"collections_cleaned": len(collections),
+		}, nil
+	}
+
+	// Delete all documents from specific collection
+	docs, err := s.dbClient.ListDocuments(timeoutCtx, collectionName, 10000, 0) // Large limit, offset 0
+	if err != nil {
+		return nil, s.enhanceError("failed to list documents", err)
+	}
+
+	deletedCount := 0
+	for _, doc := range docs {
+		err := s.dbClient.DeleteDocument(timeoutCtx, collectionName, doc.ID)
+		if err != nil {
+			s.logger.Warn(fmt.Sprintf("Failed to delete document %s: %v", doc.ID, err))
+			continue
+		}
+		deletedCount++
+	}
+
+	return map[string]interface{}{
+		"collection":    collectionName,
+		"deleted_count": deletedCount,
+	}, nil
+}
+
+// handleShowDocumentByName shows a document by filename instead of ID
+func (s *Server) handleShowDocumentByName(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["collection"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	filename, ok := args["filename"].(string)
+	if !ok || filename == "" {
+		return nil, fmt.Errorf("filename is required")
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
+	// List documents and find by filename
+	// We'll use a reasonable limit and search through documents
+	docs, err := s.dbClient.ListDocuments(timeoutCtx, collectionName, 1000, 0)
+	if err != nil {
+		return nil, s.enhanceError("failed to list documents", err)
+	}
+
+	// Search for document with matching filename in metadata or URL
+	for _, doc := range docs {
+		// Check URL field
+		if doc.URL != "" && strings.Contains(doc.URL, filename) {
+			return map[string]interface{}{
+				"document_id": doc.ID,
+				"collection":  collectionName,
+				"url":         doc.URL,
+				"text":        doc.Text,
+				"metadata":    doc.Metadata,
+			}, nil
+		}
+
+		// Check metadata for filename field
+		if doc.Metadata != nil {
+			if filenameVal, ok := doc.Metadata["filename"].(string); ok && filenameVal == filename {
+				return map[string]interface{}{
+					"document_id": doc.ID,
+					"collection":  collectionName,
+					"url":         doc.URL,
+					"text":        doc.Text,
+					"metadata":    doc.Metadata,
+				}, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("document with filename '%s' not found in collection '%s'", filename, collectionName)
+}
+
+// handleDeleteDocumentByName deletes a document by filename instead of ID
+func (s *Server) handleDeleteDocumentByName(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["collection"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	filename, ok := args["filename"].(string)
+	if !ok || filename == "" {
+		return nil, fmt.Errorf("filename is required")
+	}
+
+	// Create timeout context
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
+	// List documents and find by filename
+	docs, err := s.dbClient.ListDocuments(timeoutCtx, collectionName, 1000, 0)
+	if err != nil {
+		return nil, s.enhanceError("failed to list documents", err)
+	}
+
+	// Search for document with matching filename
+	for _, doc := range docs {
+		// Check URL field
+		if doc.URL != "" && strings.Contains(doc.URL, filename) {
+			err := s.dbClient.DeleteDocument(timeoutCtx, collectionName, doc.ID)
+			if err != nil {
+				return nil, s.enhanceError("failed to delete document", err)
+			}
+			return map[string]interface{}{
+				"document_id": doc.ID,
+				"collection":  collectionName,
+				"filename":    filename,
+				"status":      "deleted",
+			}, nil
+		}
+
+		// Check metadata for filename field
+		if doc.Metadata != nil {
+			if filenameVal, ok := doc.Metadata["filename"].(string); ok && filenameVal == filename {
+				err := s.dbClient.DeleteDocument(timeoutCtx, collectionName, doc.ID)
+				if err != nil {
+					return nil, s.enhanceError("failed to delete document", err)
+				}
+				return map[string]interface{}{
+					"document_id": doc.ID,
+					"collection":  collectionName,
+					"filename":    filename,
+					"status":      "deleted",
+				}, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("document with filename '%s' not found in collection '%s'", filename, collectionName)
+}
+
+// handleExecuteQuery executes a natural language query against documents
+func (s *Server) handleExecuteQuery(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	query, ok := args["query"].(string)
+	if !ok || query == "" {
+		return nil, fmt.Errorf("query is required")
+	}
+
+	collectionName, _ := args["collection"].(string)
+	limit := 5 // default limit
+	if limitArg, ok := args["limit"].(float64); ok {
+		limit = int(limitArg)
+	}
+
+	// Create timeout context for query operations
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
+	defer cancel()
+
+	// If no collection specified, search across all collections
+	if collectionName == "" {
+		collections, err := s.dbClient.ListCollections(timeoutCtx)
+		if err != nil {
+			return nil, s.enhanceError("failed to list collections", err)
+		}
+
+		// Query each collection and aggregate results
+		allResults := []interface{}{}
+		for _, coll := range collections {
+			queryOptions := &vectordb.QueryOptions{
+				TopK: limit,
+			}
+			results, err := s.dbClient.SearchSemantic(timeoutCtx, coll.Name, query, queryOptions)
+			if err != nil {
+				s.logger.Warn(fmt.Sprintf("Failed to query collection %s: %v", coll.Name, err))
+				continue
+			}
+
+			// Add collection name to each result
+			for _, result := range results {
+				resultMap := map[string]interface{}{
+					"collection":  coll.Name,
+					"document_id": result.Document.ID,
+					"text":        result.Document.Text,
+					"url":         result.Document.URL,
+					"metadata":    result.Document.Metadata,
+					"score":       result.Score,
+				}
+				allResults = append(allResults, resultMap)
+			}
+		}
+
+		// Sort by score and limit
+		if len(allResults) > limit {
+			allResults = allResults[:limit]
+		}
+
+		return map[string]interface{}{
+			"query":   query,
+			"results": allResults,
+			"count":   len(allResults),
+		}, nil
+	}
+
+	// Query specific collection
+	queryOptions := &vectordb.QueryOptions{
+		TopK: limit,
+	}
+	results, err := s.dbClient.SearchSemantic(timeoutCtx, collectionName, query, queryOptions)
+	if err != nil {
+		return nil, s.enhanceError("failed to execute query", err)
+	}
+
+	// Format results
+	formattedResults := make([]interface{}, len(results))
+	for i, result := range results {
+		formattedResults[i] = map[string]interface{}{
+			"document_id": result.Document.ID,
+			"text":        result.Document.Text,
+			"url":         result.Document.URL,
+			"metadata":    result.Document.Metadata,
+			"score":       result.Score,
+		}
+	}
+
+	return map[string]interface{}{
+		"collection": collectionName,
+		"query":      query,
+		"results":    formattedResults,
+		"count":      len(formattedResults),
+	}, nil
+}

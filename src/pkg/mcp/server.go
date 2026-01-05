@@ -587,6 +587,102 @@ func (s *Server) registerTools() {
 		},
 		Handler: s.handleShowCollectionEmbeddings,
 	})
+
+	// Phase 4 tools - Medium priority operations
+	s.registerTool(Tool{
+		Name:        "get_collection_stats",
+		Description: "Get statistics for a collection including document count and schema info",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+			},
+			"required": []string{"name"},
+		},
+		Handler: s.handleGetCollectionStats,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_all_documents",
+		Description: "Delete all documents from a collection or all collections (use with caution)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection (optional - if not provided, deletes from all collections)",
+				},
+			},
+		},
+		Handler: s.handleDeleteAllDocuments,
+	})
+
+	s.registerTool(Tool{
+		Name:        "show_document_by_name",
+		Description: "Show a document by filename instead of ID",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"filename": map[string]interface{}{
+					"type":        "string",
+					"description": "Filename to search for in URL or metadata",
+				},
+			},
+			"required": []string{"collection", "filename"},
+		},
+		Handler: s.handleShowDocumentByName,
+	})
+
+	s.registerTool(Tool{
+		Name:        "delete_document_by_name",
+		Description: "Delete a document by filename instead of ID",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection",
+				},
+				"filename": map[string]interface{}{
+					"type":        "string",
+					"description": "Filename to search for in URL or metadata",
+				},
+			},
+			"required": []string{"collection", "filename"},
+		},
+		Handler: s.handleDeleteDocumentByName,
+	})
+
+	s.registerTool(Tool{
+		Name:        "execute_query",
+		Description: "Execute a natural language query against documents in one or all collections",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"query": map[string]interface{}{
+					"type":        "string",
+					"description": "Natural language query to search for",
+				},
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection (optional - if not provided, searches all collections)",
+				},
+				"limit": map[string]interface{}{
+					"type":        "number",
+					"description": "Maximum number of results to return (default: 5)",
+				},
+			},
+			"required": []string{"query"},
+		},
+		Handler: s.handleExecuteQuery,
+	})
 }
 
 // registerTool registers a tool with the server
