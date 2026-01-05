@@ -4,7 +4,6 @@
 package tests
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -19,41 +18,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// loadEnvFile loads environment variables from .env file
-func loadEnvFile(filename string) error {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-
-		// Remove quotes if present
-		if len(value) >= 2 && ((value[0] == '"' && value[len(value)-1] == '"') ||
-			(value[0] == '\'' && value[len(value)-1] == '\'')) {
-			value = value[1 : len(value)-1]
-		}
-
-		os.Setenv(key, value)
-	}
-
-	return scanner.Err()
-}
-
 // TestFastMCPIntegration runs fast integration tests with MCP server and Weaviate Cloud
 // Note: Some tests may show "skipped" messages for expected behaviors:
 // - MCP server not running (expected in test environment)
@@ -62,7 +26,7 @@ func loadEnvFile(filename string) error {
 // These are not errors and the tests will still pass.
 func TestFastMCPIntegration(t *testing.T) {
 	// Load .env file if it exists (from project root)
-	if err := loadEnvFile("../.env"); err != nil {
+	if err := loadEnvFile("../../.env"); err != nil {
 		t.Logf("Could not load .env file: %v", err)
 	}
 
@@ -77,7 +41,7 @@ func TestFastMCPIntegration(t *testing.T) {
 	}
 
 	// Load configuration
-	cfg, err := config.LoadConfig("../config.yaml", "../.env")
+	cfg, err := config.LoadConfig("../../config.yaml", "../../.env")
 	if err != nil {
 		t.Skipf("Skipping MCP integration tests - failed to load configuration: %v", err)
 	}
@@ -593,7 +557,7 @@ func TestFastMCPIntegration(t *testing.T) {
 // TestMCPToolCallViaHTTP tests MCP tools via HTTP API
 func TestMCPToolCallViaHTTP(t *testing.T) {
 	// Load .env file if it exists (from project root)
-	if err := loadEnvFile("../.env"); err != nil {
+	if err := loadEnvFile("../../.env"); err != nil {
 		t.Logf("Could not load .env file: %v", err)
 	}
 

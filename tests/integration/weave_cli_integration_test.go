@@ -17,7 +17,7 @@ import (
 // TestWeaviateIntegration runs fast integration tests with Weaviate
 func TestWeaviateIntegration(t *testing.T) {
 	// Load .env file if it exists (from project root)
-	if err := loadEnvFile("../.env"); err != nil {
+	if err := loadEnvFile("../../.env"); err != nil {
 		t.Logf("Could not load .env file: %v", err)
 	}
 

@@ -45,37 +45,45 @@ print_help() {
     echo "Usage: ./test.sh [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  unit        Run only unit tests"
-    echo "  integration Run only integration tests"
-    echo "  fast        Run fast tests (unit + mock + MCP integration)"
-    echo "  all         Run all tests (unit + integration)"
+    echo "  unit        Run only unit tests (tests/unit/)"
+    echo "  integration Run only integration tests (tests/integration/)"
+    echo "  e2e         Run only end-to-end tests (tests/e2e/)"
+    echo "  fast        Run fast tests (unit + integration, skip E2E)"
+    echo "  all         Run all tests (unit + integration + e2e)"
     echo "  coverage    Run tests with coverage report"
     echo "  help        Show this help message"
     echo ""
     echo "Examples:"
     echo "  ./test.sh unit         # Run only unit tests"
     echo "  ./test.sh integration  # Run only integration tests"
-    echo "  ./test.sh fast         # Run fast tests (unit + mock + MCP integration)"
+    echo "  ./test.sh e2e          # Run only E2E tests"
+    echo "  ./test.sh fast         # Run unit + integration (skip E2E)"
     echo "  ./test.sh all          # Run all tests"
     echo "  ./test.sh coverage     # Run tests with coverage report"
     echo "  ./test.sh              # Run unit tests (default)"
     echo ""
     echo "Test Categories:"
-    echo "  Unit Tests:"
-    echo "    - Configuration management testing"
-    echo "    - Mock client testing"
-    echo "    - Utility function testing"
+    echo "  Unit Tests (tests/unit/):"
+    echo "    - Configuration management"
+    echo "    - MCP server initialization"
+    echo "    - Mock database functionality"
+    echo "    - Weaviate client unit tests"
     echo ""
-    echo "  Integration Tests:"
-    echo "    - Mock client testing"
-    echo "    - MCP integration with Weaviate Cloud"
-    echo "    - Vector database client testing"
-    echo "    - End-to-end workflow testing"
+    echo "  Integration Tests (tests/integration/):"
+    echo "    - MCP + Weaviate Cloud integration"
+    echo "    - MCP binary HTTP API tests"
+    echo "    - weave-cli integration tests"
+    echo ""
+    echo "  E2E Tests (tests/e2e/):"
+    echo "    - Full weave-cli + weave-mcp integration"
+    echo "    - AI features (suggest_schema, suggest_chunking)"
+    echo "    - Requires Docker and OPENAI_API_KEY"
 }
 
 # Initialize variables
 RUN_UNIT_TESTS=false
 RUN_INTEGRATION_TESTS=false
+RUN_E2E_TESTS=false
 RUN_COVERAGE=false
 
 # Check command line arguments
@@ -83,26 +91,37 @@ case "${1:-unit}" in
     "unit")
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=false
+        RUN_E2E_TESTS=false
         RUN_COVERAGE=false
         ;;
     "integration")
         RUN_UNIT_TESTS=false
         RUN_INTEGRATION_TESTS=true
+        RUN_E2E_TESTS=false
+        RUN_COVERAGE=false
+        ;;
+    "e2e")
+        RUN_UNIT_TESTS=false
+        RUN_INTEGRATION_TESTS=false
+        RUN_E2E_TESTS=true
         RUN_COVERAGE=false
         ;;
     "fast")
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
+        RUN_E2E_TESTS=false
         RUN_COVERAGE=false
         ;;
     "all")
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
+        RUN_E2E_TESTS=true
         RUN_COVERAGE=false
         ;;
     "coverage")
         RUN_UNIT_TESTS=false
         RUN_INTEGRATION_TESTS=false
+        RUN_E2E_TESTS=false
         RUN_COVERAGE=true
         ;;
     "help"|"-h"|"--help")
@@ -119,7 +138,7 @@ esac
 
 # Function to run unit tests
 run_unit_tests() {
-    print_header "Running Unit Tests..."
+    print_header "Running Unit Tests (tests/unit/)..."
 
     # Check if Go is installed
     if ! command -v go >/dev/null 2>&1; then
@@ -127,118 +146,83 @@ run_unit_tests() {
         exit 1
     fi
 
-    # Run basic unit tests with coverage
-    print_status "Running basic unit tests..."
-    if go test -v -cover -timeout=30s ./tests/... -run="TestConfig|TestMock|TestVectorDB"; then
-        print_success "Basic unit tests passed!"
-    else
-        print_error "Basic unit tests failed!"
-        exit 1
-    fi
-
-    # Run extended unit tests if available
-    print_status "Running extended unit tests..."
-    if go test -v -cover -timeout=30s ./tests/... -run="TestConfigExtended|TestMockExtended"; then
-        print_success "Extended unit tests passed!"
-    else
-        print_warning "Extended unit tests failed or not found"
-    fi
-}
-
-# Function to run integration tests
-run_integration_tests() {
-    print_header "Running Integration Tests..."
-    
-    # Check if Go is installed
-    if ! command -v go >/dev/null 2>&1; then
-        print_error "Go is not installed. Please install Go 1.21 or later."
-        exit 1
-    fi
-    
-    # Run fast integration tests (mock only)
-    print_status "Running fast integration tests (mock)..."
-    if go test -v -timeout=10s ./tests/... -run="TestMock"; then
-        print_success "Fast integration tests passed!"
-    else
-        print_warning "Fast integration tests failed"
-    fi
-    
-    # Run MCP integration tests (if Weaviate is configured)
-    print_status "Running MCP integration tests (Weaviate Cloud)..."
-    if go test -v -timeout=60s ./tests/... -run="TestFastMCPIntegration|TestMCPToolCallViaHTTP"; then
-        print_success "MCP integration tests passed!"
-    else
-        print_warning "MCP integration tests failed or skipped (check Weaviate configuration)"
-    fi
-    
-    # Run Weaviate integration tests if configured
-    if [ -n "$WEAVIATE_URL" ] && [ "$WEAVIATE_URL" != "http://localhost:8080" ]; then
-        print_status "Running Weaviate integration tests..."
-        if go test -v -timeout=30s ./tests/... -run="TestWeaviateIntegration|TestWeaviateConnectionSpeed"; then
-            print_success "Weaviate integration tests passed!"
-        else
-            print_warning "Weaviate integration tests failed"
-        fi
-    else
-        print_warning "Skipping Weaviate integration tests - no credentials provided"
-        print_status "Set WEAVIATE_URL to run Weaviate tests"
-    fi
-}
-
-# Function to run fast tests
-run_fast_tests() {
-    print_header "Running Fast Tests..."
-    
-    # Check if Go is installed
-    if ! command -v go >/dev/null 2>&1; then
-        print_error "Go is not installed. Please install Go 1.21 or later."
-        exit 1
-    fi
-    
-    # Run unit tests
+    # Run unit tests with coverage
     print_status "Running unit tests..."
-    if go test -v -timeout=30s ./tests/... -run="TestConfig|TestMock|TestVectorDB"; then
+    if go test -v -cover -timeout=30s ./tests/unit/...; then
         print_success "Unit tests passed!"
     else
         print_error "Unit tests failed!"
         exit 1
     fi
-    
-    # Run fast integration tests (mock only)
-    print_status "Running fast integration tests (mock)..."
-    if go test -v -timeout=10s ./tests/... -run="TestMock"; then
-        print_success "Fast integration tests passed!"
-    else
-        print_warning "Fast integration tests failed"
-    fi
-    
-    # Run MCP integration tests (if Weaviate is configured)
-    print_status "Running MCP integration tests (Weaviate Cloud)..."
-    if go test -v -timeout=60s ./tests/... -run="TestFastMCPIntegration|TestMCPToolCallViaHTTP"; then
-        print_success "MCP integration tests passed!"
-    else
-        print_warning "MCP integration tests failed or skipped (check Weaviate configuration)"
-    fi
-    
-    print_success "Fast tests completed!"
 }
 
-# Function to run coverage tests
-run_coverage_tests() {
-    print_header "Running Coverage Analysis..."
-    
+# Function to run integration tests
+run_integration_tests() {
+    print_header "Running Integration Tests (tests/integration/)..."
+
     # Check if Go is installed
     if ! command -v go >/dev/null 2>&1; then
         print_error "Go is not installed. Please install Go 1.21 or later."
         exit 1
     fi
-    
+
+    # Run integration tests with short flag to skip slow tests
+    print_status "Running integration tests..."
+    if go test -v -short -timeout=120s ./tests/integration/...; then
+        print_success "Integration tests passed!"
+    else
+        print_warning "Integration tests failed or skipped"
+        print_status "Some tests may require WEAVIATE_URL and WEAVIATE_API_KEY"
+    fi
+}
+
+# Function to run E2E tests
+run_e2e_tests() {
+    print_header "Running E2E Tests (tests/e2e/)..."
+
+    # Check if Go is installed
+    if ! command -v go >/dev/null 2>&1; then
+        print_error "Go is not installed. Please install Go 1.21 or later."
+        exit 1
+    fi
+
+    # Check for Docker
+    if ! command -v docker >/dev/null 2>&1; then
+        print_warning "Docker not found - E2E tests may be skipped"
+    fi
+
+    # Check for OPENAI_API_KEY
+    if [ -z "$OPENAI_API_KEY" ]; then
+        print_warning "OPENAI_API_KEY not set - AI feature tests may be skipped"
+    fi
+
+    # Run E2E tests (they will skip if dependencies are missing)
+    print_status "Running E2E tests..."
+    if go test -v -timeout=10m ./tests/e2e/...; then
+        print_success "E2E tests passed!"
+    else
+        print_warning "E2E tests failed or skipped"
+        print_status "E2E tests require Docker and OPENAI_API_KEY"
+    fi
+}
+
+
+# Function to run coverage tests
+run_coverage_tests() {
+    print_header "Running Coverage Analysis..."
+
+    # Check if Go is installed
+    if ! command -v go >/dev/null 2>&1; then
+        print_error "Go is not installed. Please install Go 1.21 or later."
+        exit 1
+    fi
+
     # Create coverage directory
     mkdir -p coverage
-    
+
     # Run tests with coverage across all packages
     print_status "Running tests with coverage..."
-    if go test -coverprofile=coverage/coverage.out -covermode=atomic -coverpkg=./src/pkg/... ./tests/... -run="TestConfig|TestMock|TestMCP|TestFastMock|TestFastConfig"; then
+    if go test -coverprofile=coverage/coverage.out -covermode=atomic -coverpkg=./src/pkg/... ./tests/unit/... ./tests/integration/... ./src/pkg/mcp/...; then
         print_status "Generating coverage report..."
 
         # Generate HTML coverage report
@@ -263,18 +247,16 @@ run_coverage_tests() {
 }
 
 # Run tests based on command
-if [ "$RUN_UNIT_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
-    # Check if this is a fast test run
-    if [ "${1:-unit}" = "fast" ]; then
-        run_fast_tests
-    else
-        run_unit_tests
-        run_integration_tests
-    fi
-elif [ "$RUN_UNIT_TESTS" = true ]; then
+if [ "$RUN_UNIT_TESTS" = true ]; then
     run_unit_tests
-elif [ "$RUN_INTEGRATION_TESTS" = true ]; then
+fi
+
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     run_integration_tests
+fi
+
+if [ "$RUN_E2E_TESTS" = true ]; then
+    run_e2e_tests
 fi
 
 # Run coverage tests if requested
