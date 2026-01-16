@@ -372,9 +372,17 @@ func TestFastMCPIntegration(t *testing.T) {
 			return
 		}
 
-		count, ok := resultMap["count"].(int)
-		if !ok {
-			t.Errorf("Expected count integer, got %T", resultMap["count"])
+		// Handle both int and int64 for backward compatibility
+		var count int64
+		switch v := resultMap["count"].(type) {
+		case int:
+			count = int64(v)
+		case int64:
+			count = v
+		case float64:
+			count = int64(v)
+		default:
+			t.Errorf("Expected count to be numeric, got %T", resultMap["count"])
 			return
 		}
 

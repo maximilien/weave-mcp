@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.3] - 2026-01-16
+
+### Changed
+
+- **Updated weave-cli dependency to v0.9.3** - Improved stability and
+  cross-VDB querying
+  - Fixed Milvus type conversion panic during cross-VDB queries with VARCHAR
+    metadata columns
+  - Fixed RAG agent VDB bias where only first VDB results were shown in
+    cross-VDB queries
+  - Enhanced cross-VDB query result aggregation with epsilon-based random
+    shuffling for fair distribution
+  - Improved multi-collection query support with better result ranking
+  - All existing MCP tools automatically benefit from improved underlying
+    implementation
+
+### Fixed
+
+- Fixed integration test type assertion for `count_documents` result (int vs
+  int64 compatibility)
+
 ## [v0.9.0] - 2026-01-05
 
 ### Added
