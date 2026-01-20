@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	weaveCLIVersion = "v0.9.3"
+	weaveCLIVersion = "v0.9.4"
 	weaveCLIRepo    = "maximilien/weave-cli"
 )
 

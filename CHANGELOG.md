@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.4] - 2026-01-20
+
+### Changed
+
+- **Updated weave-cli dependency to v0.9.4** - Multi-modal RAG support and
+  image collection improvements
+  - Added multi-modal RAG support for image collections with automatic content
+    extraction (OCR text, descriptions, tags, image URLs)
+  - New `--top_k_images` flag support for query diversification across text
+    and image collections
+  - Enhanced image citations with visual distinction (markdown and plain text
+    formats)
+  - Fixed image collection creation bugs (embedding model config, schema
+    detection)
+  - Comprehensive integration test coverage (95%+) for multi-modal workflows
+  - All 23 existing MCP tools automatically benefit from improved multi-modal
+    support
+
 ## [v0.9.3] - 2026-01-16
 
 ### Changed
