@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.10] - 2026-01-26
+
+### Changed
+
+- **Updated weave-cli dependency to v0.9.10** - Critical bug fixes and agent
+  evaluation system
+  - **Critical:** Fixed image storage for Milvus (100% ingestion success, was
+    0% for large images)
+  - **Critical:** Fixed multi-collection query panics with 3+ collections
+  - Added metadata truncation with `--max-metadata-length` flag (default: 2000
+    chars)
+  - Improved Milvus VARCHAR limit handling (stores URL reference for large
+    images)
+  - Added type switches for VARCHAR and JSONBytes columns in multi-collection
+    queries
+  - Implemented Phase 1 agent evaluation system with dataset creation tools
+  - Added pluggable evaluator architecture and Opik integration
+  - Increased test coverage from 60.5% to 66.4%
+  - All 23 existing MCP tools automatically benefit from improved stability
+    and reliability
+
+### Summary of v0.9.5-v0.9.10 Changes
+
+- v0.9.5: Metadata management with truncation support
+- v0.9.6: Corrected metadata truncation implementation for Milvus
+- v0.9.7: Critical fix - 100% image ingestion success (was 0%)
+- v0.9.8: Critical fix - stable multi-collection queries (no more panics)
+- v0.9.9: Agent evaluation system Phase 1 with dataset tools
+- v0.9.10: Custom evaluators and Opik integration
+
 ## [v0.9.4] - 2026-01-20
 
 ### Changed
