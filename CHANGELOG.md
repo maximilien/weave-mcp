@@ -8,6 +8,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.12] - 2026-01-28
+
+### Changed
+
+- **Updated weave-cli dependency to v0.9.12** - Production hardening and
+  multi-agent support
+  - Added rich error context for Weaviate VDB operations (better debugging)
+  - Implemented structured logging with file output and config support
+  - Added agent validation with typo suggestions and comprehensive error
+    messages
+  - Multi-agent orchestration support (v0.9.11)
+  - Integrated custom evaluators into evaluation runner (v0.9.11)
+  - Improved test coverage: Supabase (13.0% → 21.3%), Neo4j (3.9% → 15.8%)
+  - Sort evaluation results by timestamp (newest first)
+  - All 23 existing MCP tools automatically benefit from improved error
+    handling and logging
+
+### Summary of v0.9.11-v0.9.12 Changes
+
+- v0.9.11: Multi-agent orchestration, custom evaluators, improved test
+  coverage
+- v0.9.12: Production hardening with rich error context, structured logging,
+  agent validation
+
 ## [v0.9.10] - 2026-01-26
 
 ### Changed

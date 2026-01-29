@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/maximilien/weave-cli v0.9.10
+	github.com/maximilien/weave-cli v0.9.12
 	github.com/modelcontextprotocol/go-sdk v1.1.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.11.1
