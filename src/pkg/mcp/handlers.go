@@ -13,8 +13,88 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/maximilien/weave-cli/src/pkg/agents"
+	"github.com/maximilien/weave-cli/src/pkg/logging"
+	"github.com/maximilien/weave-cli/src/pkg/metrics"
 	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 )
+
+// generateCorrelationID generates a unique correlation ID for request tracking
+func generateCorrelationID() string {
+	return "mcp-" + uuid.New().String()[:8]
+}
+
+// withMetrics wraps a handler to record metrics and add correlation IDs
+func (s *Server) withMetrics(operation string, handler func(ctx context.Context, args map[string]interface{}) (interface{}, error)) func(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	return func(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+		start := time.Now()
+		correlationID := generateCorrelationID()
+
+		// Get VDB type for metrics
+		dbConfig, _ := s.config.GetDefaultDatabase()
+		vdbType := "unknown"
+		if dbConfig != nil {
+			vdbType = string(dbConfig.Type)
+		}
+
+		// Create logger with context
+		logger := logging.WithFields(map[string]interface{}{
+			"correlation_id": correlationID,
+			"operation":      operation,
+			"vdb_type":       vdbType,
+		})
+
+		logger.Debug("Starting operation")
+
+		// Execute handler
+		result, err := handler(ctx, args)
+		duration := time.Since(start)
+
+		// Record metrics
+		metrics.RecordRequest(vdbType, operation, duration, err)
+
+		if err != nil {
+			logger.Error("Operation failed: %v", err)
+			metrics.RecordError(vdbType, operation, categorizeError(err))
+		} else {
+			logger.Debug("Operation completed successfully in %v", duration)
+		}
+
+		// Add metadata to result if it's a map
+		if err == nil {
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				resultMap["_metadata"] = map[string]interface{}{
+					"correlation_id": correlationID,
+					"duration_ms":    duration.Milliseconds(),
+					"operation":      operation,
+				}
+			}
+		}
+
+		return result, err
+	}
+}
+
+// categorizeError categorizes errors for metrics
+func categorizeError(err error) string {
+	if err == nil {
+		return "none"
+	}
+	errStr := err.Error()
+	switch {
+	case strings.Contains(errStr, "connection refused"), strings.Contains(errStr, "dial tcp"):
+		return "connection"
+	case strings.Contains(errStr, "timeout"), strings.Contains(errStr, "deadline exceeded"):
+		return "timeout"
+	case strings.Contains(errStr, "authentication"), strings.Contains(errStr, "unauthorized"):
+		return "auth"
+	case strings.Contains(errStr, "not found"):
+		return "not_found"
+	default:
+		return "unknown"
+	}
+}
 
 // enhanceError adds helpful context to database errors with VDB type prefix
 func (s *Server) enhanceError(operation string, err error) error {
@@ -1125,5 +1205,248 @@ func (s *Server) handleExecuteQuery(ctx context.Context, args map[string]interfa
 		"query":      query,
 		"results":    formattedResults,
 		"count":      len(formattedResults),
+	}, nil
+}
+
+// Phase 1: Observability & Monitoring tool handlers
+
+// handleConfigureLogging configures structured logging
+func (s *Server) handleConfigureLogging(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	// Parse log level
+	logLevelStr, _ := args["log_level"].(string)
+	if logLevelStr == "" {
+		logLevelStr = "info"
+	}
+
+	logLevel, err := logging.ParseLevel(logLevelStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid log level: %w", err)
+	}
+
+	// Parse log format
+	logFormatStr, _ := args["log_format"].(string)
+	if logFormatStr == "" {
+		logFormatStr = "text"
+	}
+	logFormat := logging.Format(logFormatStr)
+
+	// Parse log file
+	logFile, _ := args["log_file"].(string)
+
+	// Initialize logging
+	if err := logging.InitWithFormat(logLevel, logFormat, logFile, false); err != nil {
+		return nil, fmt.Errorf("failed to configure logging: %w", err)
+	}
+
+	result := map[string]interface{}{
+		"status":     "configured",
+		"log_level":  logLevelStr,
+		"log_format": string(logFormat),
+	}
+
+	if logFile != "" {
+		result["log_file"] = logFile
+	}
+
+	return result, nil
+}
+
+// handleGetMetrics retrieves current Prometheus metrics
+func (s *Server) handleGetMetrics(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	format, _ := args["format"].(string)
+	if format == "" {
+		format = "json"
+	}
+
+	// For now, return a summary of metrics in JSON format
+	// In the future, we can parse the actual Prometheus metrics
+	if format == "json" {
+		return map[string]interface{}{
+			"metrics_endpoint": "/metrics",
+			"description":      "Prometheus metrics available at /metrics endpoint",
+			"available_metrics": []string{
+				"weave_request_duration_seconds",
+				"weave_documents_total",
+				"weave_errors_total",
+				"weave_active_connections",
+			},
+			"labels": map[string]interface{}{
+				"weave_request_duration_seconds": []string{"vdb_type", "operation", "status"},
+				"weave_documents_total":          []string{"vdb_type", "operation"},
+				"weave_errors_total":             []string{"vdb_type", "operation", "error_type"},
+				"weave_active_connections":       []string{"vdb_type"},
+			},
+		}, nil
+	}
+
+	// For prometheus format, direct users to the /metrics endpoint
+	return map[string]interface{}{
+		"format":  "prometheus",
+		"message": "Prometheus metrics available at /metrics endpoint",
+		"url":     "/metrics",
+	}, nil
+}
+
+// handleCheckHealth performs detailed health check
+func (s *Server) handleCheckHealth(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	detailed, _ := args["detailed"].(bool)
+
+	// Create timeout context for health check
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, 10)
+	defer cancel()
+
+	// Get database config
+	dbConfig, err := s.config.GetDefaultDatabase()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database config: %w", err)
+	}
+
+	// Perform health check
+	dbErr := s.dbClient.Health(timeoutCtx)
+
+	result := map[string]interface{}{
+		"status":    "healthy",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"server":    "weave-mcp",
+	}
+
+	// Database health
+	dbStatus := map[string]interface{}{
+		"vdb_type": string(dbConfig.Type),
+		"name":     dbConfig.Name,
+		"status":   "healthy",
+	}
+
+	if dbErr != nil {
+		dbStatus["status"] = "unhealthy"
+		dbStatus["error"] = dbErr.Error()
+		result["status"] = "degraded"
+	}
+
+	if detailed {
+		dbStatus["url"] = dbConfig.URL
+		dbStatus["enabled"] = dbConfig.Enabled
+		if dbConfig.Timeout > 0 {
+			dbStatus["timeout_seconds"] = dbConfig.Timeout
+		}
+
+		// Try to get collection count as a connectivity test
+		if dbErr == nil {
+			collections, err := s.dbClient.ListCollections(timeoutCtx)
+			if err == nil {
+				dbStatus["collections_count"] = len(collections)
+			}
+		}
+	}
+
+	result["database"] = dbStatus
+
+	return result, nil
+}
+
+// Phase 2: Agent framework tool handlers
+
+// handleListAgents lists all available agents
+func (s *Server) handleListAgents(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	agentType, _ := args["agent_type"].(string)
+
+	// Get agent registry
+	registry := agents.GetDefaultAgentRegistry()
+
+	// List all agents
+	var agentList []agents.AgentInfo
+	var err error
+
+	if agentType != "" {
+		// Filter by type
+		agentList, err = registry.GetAgentsByType(agentType)
+	} else {
+		// Get all agents
+		agentList, err = registry.ListAgents()
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list agents: %w", err)
+	}
+
+	// Convert to response format
+	agentsResponse := make([]map[string]interface{}, 0, len(agentList))
+	for _, agent := range agentList {
+		agentsResponse = append(agentsResponse, map[string]interface{}{
+			"name":        agent.Name,
+			"type":        agent.Type,
+			"description": agent.Description,
+			"version":     agent.Version,
+		})
+	}
+
+	return map[string]interface{}{
+		"agents": agentsResponse,
+		"count":  len(agentsResponse),
+	}, nil
+}
+
+// handleGetAgentInfo gets detailed info about a specific agent
+func (s *Server) handleGetAgentInfo(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	agentName, ok := args["agent_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("agent_name is required")
+	}
+
+	// Get agent registry
+	registry := agents.GetDefaultAgentRegistry()
+
+	// Get agent info
+	agentInfo, err := registry.GetAgentInfo(agentName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get agent info: %w", err)
+	}
+
+	return map[string]interface{}{
+		"name":        agentInfo.Name,
+		"type":        agentInfo.Type,
+		"description": agentInfo.Description,
+		"version":     agentInfo.Version,
+		"file_path":   agentInfo.FilePath,
+	}, nil
+}
+
+// handleRunAgent executes an agent
+func (s *Server) handleRunAgent(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	agentName, ok := args["agent_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("agent_name is required")
+	}
+
+	task, ok := args["task"].(string)
+	if !ok {
+		return nil, fmt.Errorf("task is required")
+	}
+
+	parameters, _ := args["parameters"].(map[string]interface{})
+	if parameters == nil {
+		parameters = make(map[string]interface{})
+	}
+
+	// Load the agent
+	agentLoader := agents.GetDefaultAgentLoader()
+	agentConfig, err := agentLoader.LoadAgent(agentName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load agent '%s': %w", agentName, err)
+	}
+
+	// For now, return agent configuration and task details
+	// In the future, this could actually execute the agent
+	return map[string]interface{}{
+		"agent":      agentConfig.Name,
+		"type":       agentConfig.Type,
+		"task":       task,
+		"parameters": parameters,
+		"status":     "agent_loaded",
+		"message":    fmt.Sprintf("Agent '%s' loaded successfully. Full agent execution will be implemented in a future update.", agentName),
+		"config": map[string]interface{}{
+			"description": agentConfig.Description,
+			"version":     agentConfig.Version,
+		},
 	}, nil
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 	"github.com/maximilien/weave-mcp/src/pkg/config"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
 
@@ -181,6 +182,9 @@ func (s *Server) Handler() http.Handler {
 	// Health check endpoint
 	mux.HandleFunc("/health", s.handleHealth)
 
+	// Metrics endpoint (Prometheus format)
+	mux.Handle("/metrics", promhttp.Handler())
+
 	// MCP endpoints
 	mux.HandleFunc("/mcp/tools/list", s.handleToolsList)
 	mux.HandleFunc("/mcp/tools/call", s.handleToolCall)
@@ -193,6 +197,30 @@ func (s *Server) Handler() http.Handler {
 	return s.corsMiddleware(corsConfig)(mux)
 }
 
+// MetricsHandler returns a standalone metrics HTTP handler for :9091
+func (s *Server) MetricsHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", s.handleMetricsHealth)
+	return mux
+}
+
+// handleMetricsHealth handles health check for metrics endpoint
+func (s *Server) handleMetricsHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]interface{}{
+		"status":    "healthy",
+		"timestamp": time.Now().UTC(),
+		"service":   "weave-mcp-metrics",
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
 // registerTools registers all available MCP tools
 func (s *Server) registerTools() {
 	// Collection management tools
@@ -203,7 +231,7 @@ func (s *Server) registerTools() {
 			"type":       "object",
 			"properties": map[string]interface{}{},
 		},
-		Handler: s.handleListCollections,
+		Handler: s.withMetrics("list_collections", s.handleListCollections),
 	})
 
 	s.registerTool(Tool{
@@ -233,7 +261,7 @@ func (s *Server) registerTools() {
 			},
 			"required": []string{"name", "type"},
 		},
-		Handler: s.handleCreateCollection,
+		Handler: s.withMetrics("create_collection", s.handleCreateCollection),
 	})
 
 	s.registerTool(Tool{
@@ -249,7 +277,7 @@ func (s *Server) registerTools() {
 			},
 			"required": []string{"name"},
 		},
-		Handler: s.handleDeleteCollection,
+		Handler: s.withMetrics("delete_collection", s.handleDeleteCollection),
 	})
 
 	// Document management tools
@@ -682,6 +710,128 @@ func (s *Server) registerTools() {
 			"required": []string{"query"},
 		},
 		Handler: s.handleExecuteQuery,
+	})
+
+	// Phase 1: Observability & Monitoring tools
+	s.registerTool(Tool{
+		Name:        "configure_logging",
+		Description: "Configure structured logging for MCP server (log level, format, file output)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"log_level": map[string]interface{}{
+					"type":        "string",
+					"description": "Log level (debug, info, warn, error)",
+					"enum":        []string{"debug", "info", "warn", "error"},
+					"default":     "info",
+				},
+				"log_format": map[string]interface{}{
+					"type":        "string",
+					"description": "Log format (text or json)",
+					"enum":        []string{"text", "json"},
+					"default":     "text",
+				},
+				"log_file": map[string]interface{}{
+					"type":        "string",
+					"description": "Path to log file (optional, logs to stderr if not specified)",
+				},
+			},
+		},
+		Handler: s.withMetrics("configure_logging", s.handleConfigureLogging),
+	})
+
+	s.registerTool(Tool{
+		Name:        "get_metrics",
+		Description: "Retrieve current Prometheus metrics for MCP operations",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"metric_name": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter by specific metric name (optional)",
+				},
+				"format": map[string]interface{}{
+					"type":        "string",
+					"description": "Output format (prometheus or json)",
+					"enum":        []string{"prometheus", "json"},
+					"default":     "json",
+				},
+			},
+		},
+		Handler: s.withMetrics("get_metrics", s.handleGetMetrics),
+	})
+
+	s.registerTool(Tool{
+		Name:        "check_health",
+		Description: "Check detailed health status of VDB connections and MCP server",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"detailed": map[string]interface{}{
+					"type":        "boolean",
+					"description": "Include detailed connection information",
+					"default":     true,
+				},
+			},
+		},
+		Handler: s.withMetrics("check_health", s.handleCheckHealth),
+	})
+
+	// Phase 2: Agent framework tools
+	s.registerTool(Tool{
+		Name:        "list_agents",
+		Description: "List all available specialized agents for complex tasks",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"agent_type": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter by agent type (optional)",
+				},
+			},
+		},
+		Handler: s.withMetrics("list_agents", s.handleListAgents),
+	})
+
+	s.registerTool(Tool{
+		Name:        "get_agent_info",
+		Description: "Get detailed information about a specific agent",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"agent_name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the agent to get info about",
+				},
+			},
+			"required": []string{"agent_name"},
+		},
+		Handler: s.withMetrics("get_agent_info", s.handleGetAgentInfo),
+	})
+
+	s.registerTool(Tool{
+		Name:        "run_agent",
+		Description: "Execute a specialized agent for complex tasks (e.g., schema design, query optimization, RAG)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"agent_name": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the agent to run (e.g., 'schema', 'chunking', 'rag')",
+				},
+				"task": map[string]interface{}{
+					"type":        "string",
+					"description": "Description of the task for the agent to perform",
+				},
+				"parameters": map[string]interface{}{
+					"type":        "object",
+					"description": "Agent-specific parameters (varies by agent type)",
+					"default":     map[string]interface{}{},
+				},
+			},
+			"required": []string{"agent_name", "task"},
+		},
+		Handler: s.withMetrics("run_agent", s.handleRunAgent),
 	})
 }
 
