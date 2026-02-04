@@ -5,6 +5,10 @@
 
 set -e
 
+# Set CGO environment variables for packages that need C dependencies (like gosseract)
+export CGO_CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/Cellar/leptonica/1.86.0/include -I/opt/homebrew/Cellar/tesseract/5.5.1/include"
+export CGO_LDFLAGS="-L/opt/homebrew/lib"
+
 # Parse command line arguments
 SKIP_SECURITY=false
 for arg in "$@"; do
