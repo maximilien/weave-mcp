@@ -197,16 +197,35 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 
 	description, _ := args["description"].(string)
 
-	// Get vectorizer/embedding model (default to text2vec-openai)
-	vectorizer := "text2vec-openai"
-	if v, ok := args["vectorizer"].(string); ok && v != "" {
-		vectorizer = v
+	// Get embedding model - support both "embedding_model" (new) and "vectorizer" (legacy)
+	embeddingModel := ""
+	if em, ok := args["embedding_model"].(string); ok && em != "" {
+		embeddingModel = em
+	} else if v, ok := args["vectorizer"].(string); ok && v != "" {
+		embeddingModel = v
+	}
+
+	// Default to text2vec-openai if not specified
+	if embeddingModel == "" {
+		embeddingModel = "text2vec-openai"
+	}
+
+	// Validate and get model info if it's a known model
+	var modelDimensions int
+	modelInfo, err := embeddings.GetModelInfo(embeddingModel)
+	if err == nil {
+		// Known model - use auto-detected dimensions
+		modelDimensions = modelInfo.Dimensions
+		s.logger.Info(fmt.Sprintf("Using known embedding model %s with dimensions %d", embeddingModel, modelDimensions))
+	} else {
+		// Unknown model - log warning but continue (might be a custom/legacy vectorizer)
+		s.logger.Warn(fmt.Sprintf("Unknown embedding model %s - proceeding without dimension validation", embeddingModel))
 	}
 
 	// Create basic schema based on type
 	schema := &vectordb.CollectionSchema{
 		Class:      name,
-		Vectorizer: vectorizer,
+		Vectorizer: embeddingModel,
 		Properties: []vectordb.SchemaProperty{
 			{
 				Name:     "text",
@@ -235,18 +254,26 @@ func (s *Server) handleCreateCollection(ctx context.Context, args map[string]int
 	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeCollection)
 	defer cancel()
 
-	err := s.dbClient.CreateCollection(timeoutCtx, name, schema)
+	err = s.dbClient.CreateCollection(timeoutCtx, name, schema)
 	if err != nil {
 		return nil, s.enhanceError("failed to create collection", err)
 	}
 
-	return map[string]interface{}{
-		"name":        name,
-		"type":        collectionType,
-		"description": description,
-		"vectorizer":  vectorizer,
-		"status":      "created",
-	}, nil
+	response := map[string]interface{}{
+		"name":            name,
+		"type":            collectionType,
+		"description":     description,
+		"embedding_model": embeddingModel,
+		"vectorizer":      embeddingModel, // Keep for backward compatibility
+		"status":          "created",
+	}
+
+	// Add dimensions if known
+	if modelDimensions > 0 {
+		response["dimensions"] = modelDimensions
+	}
+
+	return response, nil
 }
 
 // handleDeleteCollection handles the delete_collection tool
@@ -500,16 +527,36 @@ func (s *Server) handleCountDocuments(ctx context.Context, args map[string]inter
 	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
 	defer cancel()
 
+	// Auto-detect collection's embedding model from schema
+	embeddingModel := "unknown"
+	var modelDimensions int
+	schema, err := s.dbClient.GetSchema(timeoutCtx, collection)
+	if err == nil && schema != nil {
+		embeddingModel = schema.Vectorizer
+		// Try to get model dimensions from registry
+		if modelInfo, err := embeddings.GetModelInfo(embeddingModel); err == nil {
+			modelDimensions = modelInfo.Dimensions
+		}
+	}
+
 	// Count documents using vectordb client
 	count, err := s.dbClient.GetCollectionCount(timeoutCtx, collection)
 	if err != nil {
 		return nil, s.enhanceError("failed to count documents", err)
 	}
 
-	return map[string]interface{}{
-		"collection": collection,
-		"count":      count,
-	}, nil
+	response := map[string]interface{}{
+		"collection":      collection,
+		"count":           count,
+		"embedding_model": embeddingModel,
+	}
+
+	// Add dimensions if known
+	if modelDimensions > 0 {
+		response["dimensions"] = modelDimensions
+	}
+
+	return response, nil
 }
 
 // handleQueryDocuments handles the query_documents tool
@@ -537,6 +584,18 @@ func (s *Server) handleQueryDocuments(ctx context.Context, args map[string]inter
 	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeQuery)
 	defer cancel()
 
+	// Auto-detect collection's embedding model from schema
+	embeddingModel := "unknown"
+	var modelDimensions int
+	schema, err := s.dbClient.GetSchema(timeoutCtx, collection)
+	if err == nil && schema != nil {
+		embeddingModel = schema.Vectorizer
+		// Try to get model dimensions from registry
+		if modelInfo, err := embeddings.GetModelInfo(embeddingModel); err == nil {
+			modelDimensions = modelInfo.Dimensions
+		}
+	}
+
 	// Query documents using vectordb client
 	queryOptions := &vectordb.QueryOptions{
 		TopK: limit,
@@ -560,12 +619,20 @@ func (s *Server) handleQueryDocuments(ctx context.Context, args map[string]inter
 		})
 	}
 
-	return map[string]interface{}{
-		"results":    result,
-		"count":      len(result),
-		"collection": collection,
-		"query":      query,
-	}, nil
+	response := map[string]interface{}{
+		"results":         result,
+		"count":           len(result),
+		"collection":      collection,
+		"query":           query,
+		"embedding_model": embeddingModel,
+	}
+
+	// Add dimensions if known
+	if modelDimensions > 0 {
+		response["dimensions"] = modelDimensions
+	}
+
+	return response, nil
 }
 
 // handleUpdateDocument handles the update_document tool

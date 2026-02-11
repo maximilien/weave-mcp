@@ -236,7 +236,7 @@ func (s *Server) registerTools() {
 
 	s.registerTool(Tool{
 		Name:        "create_collection",
-		Description: "Create a new collection in the vector database",
+		Description: "Create a new collection in the vector database with optional embedding model selection",
 		InputSchema: map[string]interface{}{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -253,9 +253,14 @@ func (s *Server) registerTools() {
 					"type":        "string",
 					"description": "Description of the collection",
 				},
+				"embedding_model": map[string]interface{}{
+					"type":        "string",
+					"description": "Embedding model to use (e.g., 'sentence-transformers/all-mpnet-base-v2', 'ollama/nomic-embed-text', 'openai/text-embedding-3-small'). Use 'list_embedding_models' to see available options.",
+					"default":     "text2vec-openai",
+				},
 				"vectorizer": map[string]interface{}{
 					"type":        "string",
-					"description": "Embedding model/vectorizer to use (e.g., text2vec-openai, text-embedding-3-small, text-embedding-ada-002)",
+					"description": "Legacy parameter - use 'embedding_model' instead",
 					"default":     "text2vec-openai",
 				},
 			},
