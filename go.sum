@@ -282,8 +282,8 @@ github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
 github.com/mattn/go-runewidth v0.0.16/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/mattn/goveralls v0.0.2/go.mod h1:8d1ZMHsd7fW6IRPKQh46F2WRpyib5/X4FOpevwGNQEw=
-github.com/maximilien/weave-cli v0.9.15 h1:CbwH85QSETiFWaGJoM6iplVkdb9VSunpTLW4VAMh00Q=
-github.com/maximilien/weave-cli v0.9.15/go.mod h1:jyALEm9/HBJd/wNKM6XP5e5CteYT3hYuTc1dL7csv1g=
+github.com/maximilien/weave-cli v0.9.20 h1:ybPxT3HjYm/CJ30YlSlwkVz1r2kF8kGwwLUsWBDTA7c=
+github.com/maximilien/weave-cli v0.9.20/go.mod h1:jyALEm9/HBJd/wNKM6XP5e5CteYT3hYuTc1dL7csv1g=
 github.com/mediocregopher/radix/v3 v3.4.2/go.mod h1:8FL3F6UQRXHXIBSPUs5h0RybMF8i4n7wVopoX3x7Bv8=
 github.com/microcosm-cc/bluemonday v1.0.2/go.mod h1:iVP4YcDBq+n/5fb23BhYFvIMq/leAFZyRl6bYmGDlGc=
 github.com/milvus-io/milvus-proto/go-api/v2 v2.4.10-0.20240819025435-512e3b98866a h1:0B/8Fo66D8Aa23Il0yrQvg1KKz92tE/BJ5BvkUxxAAk=
