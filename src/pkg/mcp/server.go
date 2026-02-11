@@ -833,6 +833,72 @@ func (s *Server) registerTools() {
 		},
 		Handler: s.withMetrics("run_agent", s.handleRunAgent),
 	})
+
+	// Embedding model tools (Phase 0 - OSS Embedding Support)
+	s.registerTool(Tool{
+		Name:        "list_embedding_models",
+		Description: "List all available embedding models with their metadata (dimensions, provider, OSS status)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"provider": map[string]interface{}{
+					"type":        "string",
+					"description": "Filter by provider (openai, ollama, sentence-transformers, cohere, voyage)",
+				},
+				"oss_only": map[string]interface{}{
+					"type":        "boolean",
+					"description": "If true, only return open-source models",
+					"default":     false,
+				},
+			},
+		},
+		Handler: s.withMetrics("list_embedding_models", s.handleListEmbeddingModels),
+	})
+
+	s.registerTool(Tool{
+		Name:        "check_embedding_provider_availability",
+		Description: "Check if an embedding provider is available and configured (checks for API keys, local services, etc.)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"provider": map[string]interface{}{
+					"type":        "string",
+					"description": "Provider name (openai, ollama, sentence-transformers)",
+				},
+				"model": map[string]interface{}{
+					"type":        "string",
+					"description": "Optional: specific model to check (defaults to a common model for the provider)",
+				},
+			},
+			"required": []string{"provider"},
+		},
+		Handler: s.withMetrics("check_embedding_provider_availability", s.handleCheckEmbeddingProviderAvailability),
+	})
+
+	s.registerTool(Tool{
+		Name:        "reembed_collection",
+		Description: "Re-generate embeddings for all documents in a collection using a new embedding model (20x faster than re-ingestion)",
+		InputSchema: map[string]interface{}{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"collection": map[string]interface{}{
+					"type":        "string",
+					"description": "Name of the collection to re-embed",
+				},
+				"new_model": map[string]interface{}{
+					"type":        "string",
+					"description": "New embedding model to use (e.g., 'sentence-transformers/all-mpnet-base-v2', 'ollama/nomic-embed-text')",
+				},
+				"batch_size": map[string]interface{}{
+					"type":        "integer",
+					"description": "Number of documents to process in each batch",
+					"default":     100,
+				},
+			},
+			"required": []string{"collection", "new_model"},
+		},
+		Handler: s.withMetrics("reembed_collection", s.handleReembedCollection),
+	})
 }
 
 // registerTool registers a tool with the server

@@ -15,8 +15,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/maximilien/weave-cli/src/pkg/agents"
+	"github.com/maximilien/weave-cli/src/pkg/embeddings"
 	"github.com/maximilien/weave-cli/src/pkg/logging"
 	"github.com/maximilien/weave-cli/src/pkg/metrics"
+	"github.com/maximilien/weave-cli/src/pkg/reembedding"
+	"github.com/maximilien/weave-cli/src/pkg/reembedding/providers"
 	"github.com/maximilien/weave-cli/src/pkg/vectordb"
 )
 
@@ -834,47 +837,6 @@ func (s *Server) handleShowCollection(ctx context.Context, args map[string]inter
 	}, nil
 }
 
-// handleListEmbeddingModels lists all available embedding models
-func (s *Server) handleListEmbeddingModels(ctx context.Context, args map[string]interface{}) (interface{}, error) {
-	// Return list of supported embedding models
-	// These are the models supported across all vector databases
-	models := []map[string]interface{}{
-		{
-			"name":        "text2vec-openai",
-			"type":        "openai",
-			"description": "OpenAI text embedding model (legacy, uses text-embedding-ada-002)",
-			"dimensions":  1536,
-			"provider":    "openai",
-		},
-		{
-			"name":        "text-embedding-3-small",
-			"type":        "openai",
-			"description": "OpenAI's latest small embedding model - faster and cheaper",
-			"dimensions":  1536,
-			"provider":    "openai",
-		},
-		{
-			"name":        "text-embedding-3-large",
-			"type":        "openai",
-			"description": "OpenAI's latest large embedding model - better quality",
-			"dimensions":  3072,
-			"provider":    "openai",
-		},
-		{
-			"name":        "text-embedding-ada-002",
-			"type":        "openai",
-			"description": "OpenAI's Ada model (legacy)",
-			"dimensions":  1536,
-			"provider":    "openai",
-		},
-	}
-
-	return map[string]interface{}{
-		"models": models,
-		"count":  len(models),
-	}, nil
-}
-
 // handleShowCollectionEmbeddings shows embedding configuration for a collection
 func (s *Server) handleShowCollectionEmbeddings(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	collectionName, ok := args["name"].(string)
@@ -1448,5 +1410,208 @@ func (s *Server) handleRunAgent(ctx context.Context, args map[string]interface{}
 			"description": agentConfig.Description,
 			"version":     agentConfig.Version,
 		},
+	}, nil
+}
+
+// handleListEmbeddingModels lists all available embedding models with their metadata
+func (s *Server) handleListEmbeddingModels(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	provider, _ := args["provider"].(string)
+	ossOnly := false
+	if ossOnlyVal, ok := args["oss_only"].(bool); ok {
+		ossOnly = ossOnlyVal
+	}
+
+	var modelsList []embeddings.ModelInfo
+
+	// Filter by provider or OSS status
+	if ossOnly {
+		modelsList = embeddings.GetOSSModels()
+	} else if provider != "" {
+		modelsList = embeddings.ListModelsByProvider(provider)
+	} else {
+		modelsList = embeddings.ListKnownModels()
+	}
+
+	// Convert to response format
+	modelsResponse := make([]map[string]interface{}, 0, len(modelsList))
+	for _, model := range modelsList {
+		modelsResponse = append(modelsResponse, map[string]interface{}{
+			"name":        model.Name,
+			"dimensions":  model.Dimensions,
+			"provider":    model.Provider,
+			"max_tokens":  model.MaxTokens,
+			"oss":         model.OSS,
+			"full_name":   fmt.Sprintf("%s/%s", model.Provider, model.Name),
+			"description": fmt.Sprintf("%s embedding model (%dd)", model.Provider, model.Dimensions),
+		})
+	}
+
+	return map[string]interface{}{
+		"models": modelsResponse,
+		"count":  len(modelsResponse),
+		"filter": map[string]interface{}{
+			"provider": provider,
+			"oss_only": ossOnly,
+		},
+	}, nil
+}
+
+// handleCheckEmbeddingProviderAvailability checks if an embedding provider is available
+func (s *Server) handleCheckEmbeddingProviderAvailability(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	providerName, ok := args["provider"].(string)
+	if !ok || providerName == "" {
+		return nil, fmt.Errorf("provider name is required")
+	}
+
+	modelName, _ := args["model"].(string)
+
+	// If model specified, use it; otherwise use a default model for the provider
+	if modelName == "" {
+		switch strings.ToLower(providerName) {
+		case "openai":
+			modelName = "openai/text-embedding-3-small"
+		case "ollama":
+			modelName = "ollama/nomic-embed-text"
+		case "sentence-transformers":
+			modelName = "sentence-transformers/all-minilm-l6-v2"
+		default:
+			return nil, fmt.Errorf("unsupported provider: %s (supported: openai, ollama, sentence-transformers)", providerName)
+		}
+	}
+
+	// Try to create provider
+	provider, err := providers.CreateProvider(ctx, modelName)
+
+	result := map[string]interface{}{
+		"provider": providerName,
+		"model":    modelName,
+	}
+
+	if err != nil {
+		result["available"] = false
+		result["error"] = err.Error()
+		result["message"] = fmt.Sprintf("Provider %s not available: %v", providerName, err)
+		return result, nil
+	}
+
+	// Check availability
+	if err := provider.IsAvailable(ctx); err != nil {
+		result["available"] = false
+		result["error"] = err.Error()
+		result["message"] = fmt.Sprintf("Provider %s not available: %v", providerName, err)
+		return result, nil
+	}
+
+	result["available"] = true
+	result["message"] = fmt.Sprintf("Provider %s is available", providerName)
+	return result, nil
+}
+
+// handleReembedCollection re-generates embeddings for all documents in a collection using a new model
+func (s *Server) handleReembedCollection(ctx context.Context, args map[string]interface{}) (interface{}, error) {
+	collectionName, ok := args["collection"].(string)
+	if !ok || collectionName == "" {
+		return nil, fmt.Errorf("collection name is required")
+	}
+
+	newModel, ok := args["new_model"].(string)
+	if !ok || newModel == "" {
+		return nil, fmt.Errorf("new_model is required")
+	}
+
+	batchSize := 100 // Default batch size
+	if batchSizeVal, ok := args["batch_size"].(float64); ok && batchSizeVal > 0 {
+		batchSize = int(batchSizeVal)
+	}
+
+	// Create embedding pipeline for the new model
+	pipeline, err := reembedding.NewEmbeddingPipeline(newModel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create embedding pipeline: %w", err)
+	}
+
+	// Check if provider is available
+	if !pipeline.IsSupported() {
+		return nil, fmt.Errorf("embedding provider for model %s is not available", newModel)
+	}
+
+	// Create timeout context for reading documents
+	timeoutCtx, cancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+	defer cancel()
+
+	// Get total document count
+	totalCount, err := s.dbClient.GetCollectionCount(timeoutCtx, collectionName)
+	if err != nil {
+		return nil, s.enhanceError("failed to get document count", err)
+	}
+
+	if totalCount == 0 {
+		return map[string]interface{}{
+			"collection":     collectionName,
+			"new_model":      newModel,
+			"total_docs":     0,
+			"processed_docs": 0,
+			"status":         "completed",
+			"message":        "Collection is empty, no documents to re-embed",
+		}, nil
+	}
+
+	// Process documents in batches
+	processedCount := 0
+	var offset int64 = 0
+
+	startTime := time.Now()
+
+	for offset < totalCount {
+		// Read batch of documents
+		docs, err := s.dbClient.ListDocuments(timeoutCtx, collectionName, batchSize, int(offset))
+		if err != nil {
+			return nil, s.enhanceError(fmt.Sprintf("failed to read documents at offset %d", offset), err)
+		}
+
+		if len(docs) == 0 {
+			break
+		}
+
+		// Generate new embeddings for the batch
+		if err := pipeline.ProcessBatch(ctx, docs); err != nil {
+			return nil, fmt.Errorf("failed to generate embeddings for batch at offset %d: %w", offset, err)
+		}
+
+		// Update documents in the vector database with new embeddings
+		for _, doc := range docs {
+			if doc == nil {
+				continue
+			}
+
+			// Update document (VDB will use doc.Embedding if present)
+			updateCtx, updateCancel := s.createContextWithTimeout(ctx, vectordb.OperationTypeDocument)
+			err := s.dbClient.UpdateDocument(updateCtx, collectionName, doc)
+			updateCancel()
+
+			if err != nil {
+				s.logger.Warn(fmt.Sprintf("Failed to update document %s: %v", doc.ID, err))
+				continue
+			}
+
+			processedCount++
+		}
+
+		offset += int64(len(docs))
+	}
+
+	duration := time.Since(startTime)
+
+	return map[string]interface{}{
+		"collection":     collectionName,
+		"new_model":      newModel,
+		"dimensions":     pipeline.GetDimensions(),
+		"provider":       pipeline.GetProvider(),
+		"total_docs":     totalCount,
+		"processed_docs": processedCount,
+		"batch_size":     batchSize,
+		"duration_ms":    duration.Milliseconds(),
+		"status":         "completed",
+		"message":        fmt.Sprintf("Successfully re-embedded %d/%d documents with model %s", processedCount, totalCount, newModel),
 	}, nil
 }

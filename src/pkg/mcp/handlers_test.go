@@ -376,7 +376,7 @@ func TestHandleShowCollection(t *testing.T) {
 
 // TestHandleListEmbeddingModels tests the list_embedding_models handler
 func TestHandleListEmbeddingModels(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success - list all models", func(t *testing.T) {
 		mockClient := &mockVectorDBClient{}
 		server := createTestServer(mockClient)
 
@@ -388,35 +388,81 @@ func TestHandleListEmbeddingModels(t *testing.T) {
 		response, ok := result.(map[string]interface{})
 		require.True(t, ok)
 
-		assert.Equal(t, 4, response["count"])
-
 		models, ok := response["models"].([]map[string]interface{})
 		require.True(t, ok)
-		assert.Len(t, models, 4)
+		assert.Equal(t, len(models), response["count"])
+		assert.Greater(t, len(models), 10, "Should have multiple providers with models")
 
 		// Verify model details
-		foundSmall := false
-		foundLarge := false
+		foundOpenAI := false
+		foundOllama := false
+		foundSentenceTransformers := false
 		for _, model := range models {
-			name := model["name"].(string)
-			if name == "text-embedding-3-small" {
-				foundSmall = true
-				assert.Equal(t, "openai", model["type"])
-				assert.Equal(t, 1536, model["dimensions"])
-				assert.Equal(t, "openai", model["provider"])
-				assert.Contains(t, model["description"], "faster and cheaper")
+			provider := model["provider"].(string)
+			if provider == "openai" {
+				foundOpenAI = true
+				assert.Contains(t, []interface{}{1536, 3072}, model["dimensions"])
+				assert.False(t, model["oss"].(bool), "OpenAI models should not be OSS")
 			}
-			if name == "text-embedding-3-large" {
-				foundLarge = true
-				assert.Equal(t, "openai", model["type"])
-				assert.Equal(t, 3072, model["dimensions"])
-				assert.Equal(t, "openai", model["provider"])
-				assert.Contains(t, model["description"], "better quality")
+			if provider == "ollama" {
+				foundOllama = true
+				assert.True(t, model["oss"].(bool), "Ollama models should be OSS")
+			}
+			if provider == "sentence-transformers" {
+				foundSentenceTransformers = true
+				assert.True(t, model["oss"].(bool), "sentence-transformers models should be OSS")
 			}
 		}
 
-		assert.True(t, foundSmall, "Should include text-embedding-3-small")
-		assert.True(t, foundLarge, "Should include text-embedding-3-large")
+		assert.True(t, foundOpenAI, "Should include OpenAI models")
+		assert.True(t, foundOllama, "Should include Ollama models")
+		assert.True(t, foundSentenceTransformers, "Should include sentence-transformers models")
+	})
+
+	t.Run("success - filter by provider", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		result, err := server.handleListEmbeddingModels(context.Background(), map[string]interface{}{
+			"provider": "openai",
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		models, ok := response["models"].([]map[string]interface{})
+		require.True(t, ok)
+		assert.Greater(t, len(models), 0, "Should have OpenAI models")
+
+		for _, model := range models {
+			assert.Equal(t, "openai", model["provider"].(string))
+		}
+	})
+
+	t.Run("success - filter by oss_only", func(t *testing.T) {
+		mockClient := &mockVectorDBClient{}
+		server := createTestServer(mockClient)
+
+		result, err := server.handleListEmbeddingModels(context.Background(), map[string]interface{}{
+			"oss_only": true,
+		})
+
+		require.NoError(t, err)
+		require.NotNil(t, result)
+
+		response, ok := result.(map[string]interface{})
+		require.True(t, ok)
+
+		models, ok := response["models"].([]map[string]interface{})
+		require.True(t, ok)
+		assert.Greater(t, len(models), 0, "Should have OSS models")
+
+		for _, model := range models {
+			assert.True(t, model["oss"].(bool), "All models should be OSS")
+		}
 	})
 }
 
